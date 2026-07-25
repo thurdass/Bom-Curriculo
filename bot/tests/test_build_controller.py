@@ -1,22 +1,13 @@
 """Tests for POST /api/v1/build — reconstructing the best possible ATS resume."""
 
 import asyncio
+import json
 
 from dependency_injector import providers
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.models.resume_analysis import BuiltResumeResult, ProjectItem, ResumeHeader
-from tests.conftest import AUTH_HEADERS
-
-
-async def request_app(method: str, path: str, **parameters):
-    """Call the ASGI application without an external server."""
-    headers = {**AUTH_HEADERS, **parameters.pop("headers", {})}
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        return await client.request(method, path, headers=headers, **parameters)
-
 
 BASE_RESUME_TEXT = (
     "Desenvolvedor backend com experiência em Python, FastAPI e SQL. Atuou em "
@@ -24,6 +15,23 @@ BASE_RESUME_TEXT = (
     "construção de APIs REST para times de produto. Formação em Ciência da "
     "Computação e experiência prévia como estagiário de TI."
 )
+
+
+class FakeDocumentReaderAggregator:
+    """Ignores the uploaded bytes/filename and returns a fixed text."""
+
+    def __init__(self, text: str = BASE_RESUME_TEXT) -> None:
+        self._text = text
+
+    def read(self, content: bytes, filename: str) -> str:
+        return self._text
+
+
+async def request_app(method: str, path: str, **parameters):
+    """Call the ASGI application without an external server."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        return await client.request(method, path, **parameters)
 
 
 class FakeResumeAnalysisManager:
@@ -45,12 +53,20 @@ class FakeResumeAnalysisManager:
 
 def test_build_endpoint_returns_built_resume() -> None:
     app.container.resume_analysis_manager.override(providers.Object(FakeResumeAnalysisManager()))
+    app.container.document_reader_aggregator.override(
+        providers.Object(FakeDocumentReaderAggregator())
+    )
     try:
         response = asyncio.run(
-            request_app("POST", "/api/v1/build", json={"resume_text": BASE_RESUME_TEXT})
+            request_app(
+                "POST",
+                "/api/v1/build",
+                files={"resume_cv": ("cv.pdf", b"irrelevant, reader is faked", "application/pdf")},
+            )
         )
     finally:
         app.container.resume_analysis_manager.reset_override()
+        app.container.document_reader_aggregator.reset_override()
 
     assert response.status_code == 200
     result = response.json()
@@ -69,9 +85,9 @@ def test_build_endpoint_returns_built_resume() -> None:
     ]
 
 
-def test_build_endpoint_rejects_missing_resume_source() -> None:
+def test_build_endpoint_rejects_missing_resume_cv() -> None:
     response = asyncio.run(
-        request_app("POST", "/api/v1/build", json={"github_url": "https://github.com/foo"})
+        request_app("POST", "/api/v1/build", data={"github_url": "https://github.com/foo"})
     )
 
     assert response.status_code == 422
@@ -99,22 +115,26 @@ def test_build_endpoint_forwards_every_supporting_source() -> None:
     spy = SpyResumeAnalysisManager()
     app.container.resume_analysis_manager.override(providers.Object(spy))
     app.container.github_profile_fetcher.override(providers.Object(FakeGitHubProfileFetcher()))
+    app.container.document_reader_aggregator.override(
+        providers.Object(FakeDocumentReaderAggregator())
+    )
     try:
         response = asyncio.run(
             request_app(
                 "POST",
                 "/api/v1/build",
-                json={
-                    "resume_text": BASE_RESUME_TEXT,
+                data={
                     "github_url": "https://github.com/pedroaruana",
                     "portfolio_url": "https://pedroaruana.dev",
-                    "additional_skills": [{"name": "React", "years": 2}],
+                    "additional_skills": json.dumps([{"name": "React", "years": 2}]),
                 },
+                files={"resume_cv": ("cv.pdf", b"irrelevant, reader is faked", "application/pdf")},
             )
         )
     finally:
         app.container.resume_analysis_manager.reset_override()
         app.container.github_profile_fetcher.reset_override()
+        app.container.document_reader_aggregator.reset_override()
 
     assert response.status_code == 200
     call = spy.calls[0]

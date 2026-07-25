@@ -24,7 +24,6 @@ from app.services.parsing.readers.docx_reader import DocxDocumentReader
 from app.services.parsing.readers.pdf_reader import PdfDocumentReader
 from app.services.parsing.readers.reader_aggregator import DocumentReaderAggregator
 from app.services.parsing.resume_content_validator import ResumeContentValidator
-from app.services.parsing.resume_file_fetcher import ResumeFileFetcher
 
 from app.services.ai.resume_analysis_manager import ResumeAnalysisManager
 
@@ -41,10 +40,6 @@ class Container(containers.DeclarativeContainer):
     document_reader_aggregator = providers.Factory(
         DocumentReaderAggregator,
         readers=providers.List(pdf_document_reader, docx_document_reader),
-    )
-    resume_file_fetcher = providers.Factory(
-        ResumeFileFetcher,
-        reader_aggregator=document_reader_aggregator,
     )
     resume_content_validator = providers.Factory(ResumeContentValidator)
 

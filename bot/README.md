@@ -1,9 +1,8 @@
 # ATS Resume Builder Bot
 
-Python service that turns raw resume text (or a PDF/DOCX file reference),
-plus optional LinkedIn/GitHub/portfolio sources, into either an ATS quality
-score or a fully reconstructed, ATS-optimized resume — no job posting
-involved.
+Python service that turns an uploaded resume (PDF/DOCX), plus optional
+LinkedIn/GitHub/portfolio sources, into either an ATS quality score or a
+fully reconstructed, ATS-optimized resume — no job posting involved.
 
 ## Integration guide for the PHP team (start here)
 
@@ -19,27 +18,19 @@ need — the rest of the file is internal implementation detail.
 > straight from the Pydantic models below, so it never drifts from the actual
 > request/response shapes.
 
-> **Authentication required:** every `/api/v1/*` call must carry
-> `Authorization: Bearer <BOT_API_KEY>`, matching the `BOT_API_KEY` secret
-> configured on the bot (see **Configuration** below). Requests without a
-> valid key get `401`; if the bot itself has no `BOT_API_KEY` configured, it
-> fails closed with `500` rather than silently accepting everything.
-> `/health`, `/`, `/docs`, `/redocs`, and `/openapi.json` stay open (no key
-> needed) since they aren't the AI-costing endpoints this protects.
-
-There are two endpoints, sharing the same request shape. Both take the base
-CV as inline text or a URL the bot will download and extract itself, plus
-the same optional supporting sources (LinkedIn, GitHub, portfolio, reported
+There are two endpoints, sharing the same request shape: `multipart/form-data`
+with the base CV as a **required** actual PDF/DOCX file upload — **never a
+URL** the bot has to fetch itself, and never plain inline text — plus the
+same optional supporting sources (LinkedIn file, GitHub, portfolio, reported
 skills) — see **Request** below for the full field list.
 
 ### `POST /api/v1/analyze` — just the ATS score
 
 Judges the resume exactly as given — no rewriting.
 
-```json
-{
-  "resume_text": "João Silva - Desenvolvedor Backend Júnior\nCOMPETÊNCIAS: Python, FastAPI..."
-}
+```bash
+curl -X POST http://localhost:8000/api/v1/analyze \
+  -F "resume_cv=@/path/to/joao.pdf;type=application/pdf"
 ```
 
 Response:
@@ -58,13 +49,12 @@ wording, action verbs, better structure) — but never invents facts (a
 company, date, technology, etc.) that aren't in the given sources — and
 returns a new score for the resulting resume.
 
-```json
-{
-  "resume_text": "João Silva - Desenvolvedor Backend Júnior\nCOMPETÊNCIAS: Python, FastAPI...",
-  "resume_linkedin_url": "https://backend/storage/linkedin/joao.pdf",
-  "github_url": "https://github.com/joaosilva",
-  "additional_skills": [{"name": "Docker", "years": 1}]
-}
+```bash
+curl -X POST http://localhost:8000/api/v1/build \
+  -F "resume_cv=@/path/to/joao.pdf;type=application/pdf" \
+  -F "resume_linkedin=@/path/to/joao-linkedin.pdf;type=application/pdf" \
+  -F "github_url=https://github.com/joaosilva" \
+  -F 'additional_skills=[{"name":"Docker","years":1}]'
 ```
 
 Response:
@@ -151,8 +141,8 @@ app/
 
 ## Processing flow
 
-1. Get resume text: inline `resume_text`, or fetched + extracted from a
-   PDF/DOCX file reference. Same for `resume_linkedin_url` if given.
+1. Get resume text: extracted from the required `resume_cv` upload (PDF/DOCX).
+   Same for `resume_linkedin` (PDF only) if given.
 2. Reject empty, too-short, or low-effort ("troll") text before it reaches the AI.
 3. Send the resume text as-is to the AI (no censoring — the AI is asked to
    return the person's real name, email, and contacts as part of the result).
@@ -181,37 +171,26 @@ Routes:
   `@document_request`/`@document_response`/`@tag` decorators on each controller,
   next to the handler they describe)
 
-### Authentication
-
-Header `Authorization: Bearer <BOT_API_KEY>` is required on both endpoints —
-see `app/core/auth.py`. `BOT_API_KEY` is a shared secret configured
-identically on the bot and on whatever calls it (see **Configuration**).
-
 ### Request
 
-Content type `application/json`. Same shape for both endpoints.
+Content type `multipart/form-data`. Same fields for both endpoints.
 
-```json
-{
-  "resume_text": "Desenvolvedor Python com 2 anos de experiência...",
-  "resume_cv_url": "https://backend/storage/cvs/resume.pdf",
-  "resume_linkedin_url": "https://backend/storage/linkedin/export.pdf",
-  "github_url": "https://github.com/joaosilva",
-  "portfolio_url": "https://joaosilva.dev",
-  "additional_skills": [{"name": "Docker", "years": 1}]
-}
+```bash
+curl -X POST http://localhost:8000/api/v1/analyze \
+  -F "resume_cv=@resume.pdf;type=application/pdf" \
+  -F "resume_linkedin=@linkedin-export.pdf;type=application/pdf" \
+  -F "github_url=https://github.com/joaosilva" \
+  -F "portfolio_url=https://joaosilva.dev" \
+  -F 'additional_skills=[{"name":"Docker","years":1}]'
 ```
 
 | Field | Required | Notes |
 |---|---|---|
-| `resume_text` | yes* | Plain resume text. |
-| `resume_cv_url` | yes* | Absolute `http(s)` URL to a PDF/DOCX; fetched and extracted automatically. |
-| `resume_linkedin_url` | no | Same as above — extracted and folded into the same prompt as supporting context. |
+| `resume_cv` | **yes** | An actual file upload — **PDF or DOCX**, never a URL and never plain text. Parsed and extracted automatically. |
+| `resume_linkedin` | no | An actual file upload — **PDF only** (LinkedIn's own "save to PDF" export is the only format users realistically have). |
 | `github_url` | no | If it resolves to a real GitHub profile, the bot fetches the live profile + top repositories (see **GitHub enrichment** below) and hands that verified data to the AI instead of just the bare link. |
 | `portfolio_url` | no | Passed to the AI as supporting context, not fetched. |
-| `additional_skills` | no | Same shape as the response's `skills` (`name` + `years`). |
-
-\* Exactly one of `resume_text` or `resume_cv_url` is required.
+| `additional_skills` | no | A single form field holding a **JSON-encoded string** of the same shape as the response's `skills` (`name` + `years`), e.g. `[{"name":"Docker","years":1}]`. |
 
 ### Response
 
@@ -223,14 +202,12 @@ Content type `application/json`. Same shape for both endpoints.
 
 | Status | When |
 |---|---|
-| `401` | `Authorization` header missing, malformed, or the bearer token doesn't match `BOT_API_KEY`. |
-| `422` | Request body fails validation (neither `resume_text` nor `resume_cv_url` given, unknown field, etc.), a file reference couldn't be downloaded/read, or the resume text (inline or extracted) was empty, too short, or low-effort/repetitive junk. `detail` carries the reason. |
+| `422` | Request fails validation (`resume_cv` missing, unknown field, etc.), `resume_cv`/`resume_linkedin` isn't a PDF/DOCX as required (`detail` names the field and expected format, e.g. `"resume_linkedin must be a PDF file"`), a file couldn't be parsed, or the extracted resume text was empty, too short, or low-effort/repetitive junk. `detail` carries the reason. |
 | `503` | Every configured AI provider failed. `detail` carries a sanitized error message. |
 
 ### Resume content validation
 
-Whatever text ends up as the resume (sent inline or extracted from a
-PDF/DOCX), `ResumeContentValidator`
+Whatever text is extracted from the uploaded `resume_cv`, `ResumeContentValidator`
 (`app/services/parsing/resume_content_validator.py`) rejects it before it
 reaches the AI if it isn't real resume content — a scanned image with no
 extractable text, a one-word placeholder, or a "troll" upload (repeated
@@ -278,9 +255,6 @@ provider chain, log level, AI output language) — see `config.yaml.example`
 for the full, commented structure. `.env` holds secrets only:
 
 - `GROQ_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`
-- `BOT_API_KEY` — shared secret required on every `/api/v1/*` call (see
-  **Authentication** above). Generate one with, e.g., `openssl rand -hex 32`
-  and configure the exact same value on whatever calls this bot.
 - `GITHUB_TOKEN` — optional, raises the GitHub REST API rate limit for
   **GitHub enrichment** above (unauthenticated works fine, just at a lower
   limit).
@@ -292,8 +266,7 @@ A few legacy operational environment variables still override their
 If `config.yaml` is missing entirely, `Settings.load()` falls back to empty
 non-secret configuration (no provider models/timeouts) rather than failing
 to start — the app will boot but every AI provider will be unconfigured, so
-don't skip the copy step above. `BOT_API_KEY` has no such fallback: if it's
-unset, every `/api/v1/*` request is rejected with `500` (fail closed).
+don't skip the copy step above.
 
 ## AI providers
 
@@ -314,7 +287,6 @@ person's actual name/email/contacts as part of the structured result.
 | `app/main.py` | Quart app factory, DI container wiring, blueprint registration. |
 | `app/core/settings.py` | Loads `config.yaml` + secret env vars into one `Settings` object. |
 | `app/core/container.py` | dependency-injector `Container`. |
-| `app/core/auth.py` | `before_request` guard: rejects `/api/v1/*` calls without a valid `BOT_API_KEY` bearer token. |
 | `app/controllers/analysis_controller.py` | `/api/v1/analyze`. |
 | `app/controllers/build_controller.py` | `/api/v1/build`. |
 | `app/controllers/resume_input.py` | Request parsing/validation shared by both controllers. |
@@ -323,8 +295,7 @@ person's actual name/email/contacts as part of the structured result.
 | `app/services/ai/resume_builder_prompt.py` | Builds the resume-reconstruction prompt. |
 | `app/services/ai/prompt_sources.py` | Shared supporting-source formatting for both prompts. |
 | `app/services/parsing/resume_content_validator.py` | Rejects empty/troll resume text. |
-| `app/services/parsing/resume_file_fetcher.py` | Downloads and extracts text from a file reference. |
-| `app/services/parsing/readers/` | PDF/DOCX text extraction (adapter + aggregator). |
+| `app/services/parsing/readers/` | PDF/DOCX text extraction (adapter + aggregator) — reads uploaded files directly, no download involved. |
 | `app/services/github/github_profile_fetcher.py` | Resolves a `github_url` against GitHub's public REST API for verified profile/repo enrichment. |
 | `app/models/resume_analysis.py` | The structured request/response contracts (DTOs). |
 | `app/models/github_profile.py` | The verified GitHub profile/repo contract (DTO). |

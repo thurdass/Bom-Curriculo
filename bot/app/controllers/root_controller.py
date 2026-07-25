@@ -22,7 +22,7 @@ _PAGE = """
 <body>
   <h1>Bom Currículo Bot API</h1>
   <p>
-    Serviço Python que recebe um currículo (texto ou arquivo PDF/DOCX) e devolve
+    Serviço Python que recebe um currículo (arquivo PDF/DOCX) e devolve
     uma nota ATS ou uma versão reconstruída e otimizada — consumido pelo backend
     Laravel do Bom Currículo.
   </p>
@@ -43,8 +43,7 @@ _PAGE = """
 
   <h2>Exemplo rápido</h2>
   <pre>curl -X POST http://localhost:8000/api/v1/analyze \\
-  -H "Content-Type: application/json" \\
-  -d '{"resume_text": "Desenvolvedor Python com 2 anos de experiência..."}'</pre>
+  -F "resume_cv=@curriculo.pdf;type=application/pdf"</pre>
 
   <p>Guia completo de integração no <code>README.md</code> do repositório.</p>
 </body>

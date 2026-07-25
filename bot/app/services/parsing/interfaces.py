@@ -2,15 +2,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Literal
 
-
-class ResumeFileFetcherInterface(ABC):
-    """Download a resume/LinkedIn file reference over HTTP and extract its text."""
-
-    @abstractmethod
-    async def fetch_and_extract_text(self, url: str) -> str:
-        ...
-
-
 ResumeContentRejectionReason = Literal["empty", "too_short", "low_content_diversity"]
 
 
