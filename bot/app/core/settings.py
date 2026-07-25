@@ -58,9 +58,27 @@ class ServerSettings:
 
 
 @dataclass(frozen=True)
+class SecuritySettings:
+    # Shared secret the Laravel backend must send as `Authorization: Bearer
+    # <api_key>` on every `/api/v1/*` call. Secret, so it only ever comes from
+    # the environment / .env — never from config.yaml.
+    api_key: str = ""
+
+
+@dataclass(frozen=True)
+class GitHubSettings:
+    # Optional: raises GitHub's unauthenticated REST API rate limit (60
+    # requests/hour per IP) to 5000/hour when set. Never required — profile
+    # enrichment just falls back to unauthenticated calls without it.
+    token: str = ""
+
+
+@dataclass(frozen=True)
 class Settings:
     server: ServerSettings
     ai: AISettings
+    security: SecuritySettings = field(default_factory=SecuritySettings)
+    github: GitHubSettings = field(default_factory=GitHubSettings)
 
     @classmethod
     def load(cls, config_path: Path | None = None) -> "Settings":
@@ -73,6 +91,8 @@ class Settings:
         return cls(
             server=cls._build_server_settings(server_raw),
             ai=cls._build_ai_settings(ai_raw),
+            security=cls._build_security_settings(),
+            github=cls._build_github_settings(),
         )
 
     @staticmethod
@@ -82,6 +102,14 @@ class Settings:
             port=int(raw.get("port", 8000)),
             log_level=os.getenv("LOG_LEVEL", raw.get("log_level", "INFO")),
         )
+
+    @staticmethod
+    def _build_security_settings() -> SecuritySettings:
+        return SecuritySettings(api_key=os.getenv("BOT_API_KEY", ""))
+
+    @staticmethod
+    def _build_github_settings() -> GitHubSettings:
+        return GitHubSettings(token=os.getenv("GITHUB_TOKEN", ""))
 
     @staticmethod
     def _build_ai_settings(raw: dict) -> AISettings:

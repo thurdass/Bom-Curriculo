@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from app.models.github_profile import GitHubProfile
 from app.models.resume_analysis import BuiltResumeResult, ResumeScoreResult, SkillItem
 
 if TYPE_CHECKING:
@@ -28,6 +29,7 @@ class ResumeAnalysisManagerInterface(ABC):
         factory: Callable[[str], AIProvider] | None = None,
         linkedin_text: str | None = None,
         github_url: str | None = None,
+        github_profile: GitHubProfile | None = None,
         portfolio_url: str | None = None,
         additional_skills: list[SkillItem] | None = None,
     ) -> ResumeScoreResult:
@@ -40,6 +42,7 @@ class ResumeAnalysisManagerInterface(ABC):
         factory: Callable[[str], AIProvider] | None = None,
         linkedin_text: str | None = None,
         github_url: str | None = None,
+        github_profile: GitHubProfile | None = None,
         portfolio_url: str | None = None,
         additional_skills: list[SkillItem] | None = None,
     ) -> BuiltResumeResult:
