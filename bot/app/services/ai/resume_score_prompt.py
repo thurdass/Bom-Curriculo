@@ -2,6 +2,7 @@
 
 import json
 
+from app.models.github_profile import GitHubProfile
 from app.models.resume_analysis import ResumeScoreResult, SkillItem
 from app.services.ai.prompt_sources import build_source_sections
 
@@ -11,6 +12,7 @@ def build_resume_score_prompt(
     output_language: str = "pt-BR",
     linkedin_text: str | None = None,
     github_url: str | None = None,
+    github_profile: GitHubProfile | None = None,
     portfolio_url: str | None = None,
     additional_skills: list[SkillItem] | None = None,
 ) -> str:
@@ -29,6 +31,7 @@ def build_resume_score_prompt(
         resume_text,
         linkedin_text=linkedin_text,
         github_url=github_url,
+        github_profile=github_profile,
         portfolio_url=portfolio_url,
         additional_skills=additional_skills,
     )

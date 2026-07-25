@@ -4,7 +4,9 @@ from pydantic import ValidationError
 from quart import request as quart_request
 
 from app.models.error_response import ErrorResponse
+from app.models.github_profile import GitHubProfile
 from app.models.resume_analysis import ResumeAnalysisRequest
+from app.services.github.interfaces import GitHubProfileFetcherInterface
 from app.services.parsing.interfaces import (
     ResumeContentValidatorInterface,
     ResumeFileFetcherInterface,
@@ -24,7 +26,8 @@ class RequestRejected(Exception):
 async def resolve_resume_input(
     resume_file_fetcher: ResumeFileFetcherInterface,
     resume_content_validator: ResumeContentValidatorInterface,
-) -> tuple[ResumeAnalysisRequest, str, str | None]:
+    github_profile_fetcher: GitHubProfileFetcherInterface,
+) -> tuple[ResumeAnalysisRequest, str, str | None, GitHubProfile | None]:
     """Parse the request body and resolve resume/LinkedIn text, raising ``RequestRejected`` on any 422."""
 
     payload = await quart_request.get_json(force=True, silent=True) or {}
@@ -62,7 +65,13 @@ async def resolve_resume_input(
     if not validation.is_valid:
         raise RequestRejected(ErrorResponse(detail=validation.reason).model_dump(mode="json"), 422)
 
-    return parsed_request, resume_text, linkedin_text
+    # Best-effort: a github_url that isn't a real/reachable profile just means no
+    # enrichment (see GitHubProfileFetcherInterface) — never rejects the request.
+    github_profile = None
+    if parsed_request.github_url:
+        github_profile = await github_profile_fetcher.fetch_profile(parsed_request.github_url)
+
+    return parsed_request, resume_text, linkedin_text, github_profile
 
 
 async def _resolve_text(

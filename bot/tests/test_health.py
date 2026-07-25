@@ -7,13 +7,15 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.models.resume_analysis import ResumeScoreResult
+from tests.conftest import AUTH_HEADERS
 
 
 async def request_app(method: str, path: str, **parameters):
     """Call the ASGI application without an external server."""
+    headers = {**AUTH_HEADERS, **parameters.pop("headers", {})}
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        return await client.request(method, path, **parameters)
+        return await client.request(method, path, headers=headers, **parameters)
 
 
 def test_health_behavior_01() -> None:
@@ -85,9 +87,17 @@ class SpyResumeAnalysisManager:
         return ResumeScoreResult(score=80, suggestion="Adicione métricas de impacto.")
 
 
+class FakeGitHubProfileFetcher:
+    """Never hits the network: returns None (no enrichment) like an unresolvable profile."""
+
+    async def fetch_profile(self, github_url: str) -> None:
+        return None
+
+
 def test_analyze_endpoint_forwards_every_supporting_source() -> None:
     spy = SpyResumeAnalysisManager()
     app.container.resume_analysis_manager.override(providers.Object(spy))
+    app.container.github_profile_fetcher.override(providers.Object(FakeGitHubProfileFetcher()))
     try:
         response = asyncio.run(
             request_app(
@@ -103,12 +113,14 @@ def test_analyze_endpoint_forwards_every_supporting_source() -> None:
         )
     finally:
         app.container.resume_analysis_manager.reset_override()
+        app.container.github_profile_fetcher.reset_override()
 
     assert response.status_code == 200
     assert len(spy.calls) == 1
     call = spy.calls[0]
     assert call["resume_text"] == BASE_RESUME_TEXT
     assert call["github_url"] == "https://github.com/pedroaruana"
+    assert call["github_profile"] is None
     assert call["portfolio_url"] == "https://pedroaruana.dev"
     assert [(skill.name, skill.years) for skill in call["additional_skills"]] == [
         ("React", 2),

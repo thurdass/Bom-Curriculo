@@ -4,6 +4,7 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from app.core.settings import Settings
+from app.models.github_profile import GitHubProfile
 from app.models.resume_analysis import BuiltResumeResult, ResumeScoreResult, SkillItem
 from app.providers.base import AIProvider, AIProviderError
 from app.providers.factory import ProviderFactory, SUPPORTED_PROVIDERS
@@ -74,6 +75,7 @@ class ResumeAnalysisManager(ResumeAnalysisManagerInterface):
         factory: Callable[[str], AIProvider] | None = None,
         linkedin_text: str | None = None,
         github_url: str | None = None,
+        github_profile: GitHubProfile | None = None,
         portfolio_url: str | None = None,
         additional_skills: list[SkillItem] | None = None,
     ) -> ResumeScoreResult:
@@ -84,6 +86,7 @@ class ResumeAnalysisManager(ResumeAnalysisManagerInterface):
             self._settings.ai.output_language,
             linkedin_text=linkedin_text,
             github_url=github_url,
+            github_profile=github_profile,
             portfolio_url=portfolio_url,
             additional_skills=additional_skills,
         )
@@ -95,6 +98,7 @@ class ResumeAnalysisManager(ResumeAnalysisManagerInterface):
         factory: Callable[[str], AIProvider] | None = None,
         linkedin_text: str | None = None,
         github_url: str | None = None,
+        github_profile: GitHubProfile | None = None,
         portfolio_url: str | None = None,
         additional_skills: list[SkillItem] | None = None,
     ) -> BuiltResumeResult:
@@ -103,6 +107,8 @@ class ResumeAnalysisManager(ResumeAnalysisManagerInterface):
         ``linkedin_text``/``github_url``/``portfolio_url``/``additional_skills`` are
         optional supporting sources folded into the same prompt as the base resume,
         so the AI produces one coherent result instead of the caller merging several.
+        ``github_profile`` is real data fetched live from GitHub (see
+        GitHubProfileFetcher) — a stronger, verified version of ``github_url``.
         """
 
         prompt = build_resume_construction_prompt(
@@ -110,6 +116,7 @@ class ResumeAnalysisManager(ResumeAnalysisManagerInterface):
             self._settings.ai.output_language,
             linkedin_text=linkedin_text,
             github_url=github_url,
+            github_profile=github_profile,
             portfolio_url=portfolio_url,
             additional_skills=additional_skills,
         )

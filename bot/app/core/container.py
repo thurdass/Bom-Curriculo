@@ -19,6 +19,7 @@ from dependency_injector import containers, providers
 from app.core.settings import Settings
 from app.providers.factory import ProviderFactory
 
+from app.services.github.github_profile_fetcher import GitHubProfileFetcher
 from app.services.parsing.readers.docx_reader import DocxDocumentReader
 from app.services.parsing.readers.pdf_reader import PdfDocumentReader
 from app.services.parsing.readers.reader_aggregator import DocumentReaderAggregator
@@ -46,6 +47,9 @@ class Container(containers.DeclarativeContainer):
         reader_aggregator=document_reader_aggregator,
     )
     resume_content_validator = providers.Factory(ResumeContentValidator)
+
+    # GitHub
+    github_profile_fetcher = providers.Factory(GitHubProfileFetcher, settings=settings)
 
     # AI
     resume_analysis_manager = providers.Factory(
