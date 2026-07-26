@@ -1,11 +1,26 @@
 <?php
 
+use App\Enums\UserGenderEnum;
+use App\Enums\UserLanguageLevelEnum;
+use App\Enums\UserQualificationTypeEnum;
+use App\Helpers\ResponseData;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Resume\ResumeController;
 use App\Http\Controllers\Api\User\UserController;
 use App\Http\Controllers\Api\User\UserResumeController;
-use App\Services\RabbitMQ\Resume\ProducerResumesService;
+use App\Services\Bot\ProcessBotService;
 use Illuminate\Support\Facades\Route;
+
+// Return enumerates data
+Route::get('/enums', function () {
+
+    return ResponseData::success('Enum\'s retrieved', [
+        'user_gender' => UserGenderEnum::toSelectArray(),
+        'user_language_level' => UserLanguageLevelEnum::toSelectArray(),
+        'user_qualification_type' => UserQualificationTypeEnum::toSelectArray(),
+    ]);
+
+});
 
 // Unauthenticated routes
 Route::group([
@@ -42,14 +57,13 @@ Route::group([
         Route::get('/pendings', [ResumeController::class, 'resumeAnalytics']);
         Route::get('/pendings/{resume}', [ResumeController::class, 'showPendingResume']);
 
+        Route::post('{resume}/finish', [ResumeController::class, 'finish']);
+
     });
 
     Route::prefix('/services')->group(function () {
-
-        Route::prefix('/rabbitmq')->group(function () {
-
-            Route::post('/process', ProducerResumesService::class);
-
+        Route::prefix('/bot')->group(function () {
+            Route::post('/process', [ProcessBotService::class, 'analyse']);
         });
     });
 

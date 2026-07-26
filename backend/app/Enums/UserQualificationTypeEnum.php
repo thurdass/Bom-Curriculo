@@ -12,4 +12,11 @@ enum UserQualificationTypeEnum: string
     case POSTGRADUATE_DEGREE = 'postgraduate_degree';
     case MASTER_DEGREE = 'master_degree';
     case DOCTORATE_DEGREE = 'doctorate_degree';
+
+    public static function toSelectArray(): array
+    {
+        return array_map(fn ($status) => [
+            'value' => $status->value,
+        ], self::cases());
+    }
 }
