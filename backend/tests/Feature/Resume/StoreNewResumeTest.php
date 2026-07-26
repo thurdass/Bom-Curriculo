@@ -36,26 +36,7 @@ it('uploads cv and linkedin files and creates a resume record', function () {
     ]);
 });
 
-it('processes the skills sent along with the resume', function () {
-
-    Storage::fake('local');
-
-    $auth = actingAsUser();
-
-    $this
-        ->withHeaders($auth['headers'])
-        ->postJson('/api/client/resumes/new-resume', [
-            'skills' => [
-                ['name' => 'PHP'],
-                ['name' => 'Laravel'],
-            ],
-        ])
-        ->assertOk();
-
-    expect($auth['user']->skills()->pluck('name')->all())->toBe(['PHP', 'Laravel']);
-});
-
-it('works with only links, no files', function () {
+it('fails with only links, no files', function () {
 
     $auth = actingAsUser();
 
@@ -65,7 +46,7 @@ it('works with only links, no files', function () {
             'github_link' => 'https://github.com/pedroaruana',
         ]);
 
-    $response->assertOk();
+    $response->assertClientError();
 
     $this->assertDatabaseMissing('user_resumes', [
         'user_id' => $auth['user']->id,

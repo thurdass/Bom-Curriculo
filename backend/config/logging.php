@@ -74,9 +74,9 @@ return [
             'replace_placeholders' => true,
         ],
 
-        'rabbit_resumes' => [
+        'bot' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/rabbit/resumes/laravel.log'),
+            'path' => storage_path('logs/bot/resumes/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 60),
             'replace_placeholders' => true,

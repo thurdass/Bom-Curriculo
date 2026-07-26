@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Api\Resume;
 
+use App\Enums\UserResumeEnum;
 use App\Helpers\ResponseData;
+use App\Http\ApiRequests\Client\Resume\FinishResumeRequest;
 use App\Http\ApiRequests\Client\Resume\NewResumeRequest;
 use App\Http\Controllers\Api\User\Traits\UserProcessRelationsTrait;
 use App\Http\Controllers\Api\User\Traits\UserUploadsTrait;
 use App\Http\Controllers\Controller;
 use App\Models\ResumeAnalytic;
+use App\Models\UserResume;
+use App\Services\Resume\ResumeDocumentService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -224,5 +228,72 @@ class ResumeController extends Controller
             $resume->toArray(),
             200
         );
+    }
+
+    public function finish(FinishResumeRequest $request, ResumeDocumentService $documentService)
+    {
+
+        try {
+
+            $resume = UserResume::findOrFail($request->input('user_resume_id'));
+
+            DB::transaction(function () use (
+                $request,
+                $documentService,
+                &$resume
+            ) {
+
+                $analytic = ResumeAnalytic::where(
+                    'user_resume_id',
+                    $resume->id
+                )->firstOrFail();
+
+                if ($analytic->user_id !== $request->user()->id) {
+                    abort(403);
+                }
+
+                $analytic->update([
+
+                    'header' => $request->header,
+                    'experiences' => $request->experiences ?? [],
+                    'projects' => $request->projects ?? [],
+                    'qualifications' => $request->qualifications ?? [],
+                    'skills' => $request->skills ?? [],
+                    'languages' => $request->input('languages', []),
+                    'others' => $request->others ?? [],
+
+                ]);
+
+                $path = $documentService->generate(
+                    $analytic,
+                    'pdf'
+                );
+
+                $resume->update([
+                    'processed_file_path' => $path,
+                    'processed_at' => now(),
+                    'status' => UserResumeEnum::READY,
+                ]);
+
+            });
+
+            return ResponseData::success(
+                'Resume generated successfully.',
+                $resume->fresh()->toArray(),
+                200
+            );
+
+        } catch (\Throwable $exception) {
+
+            return ResponseData::error(
+                'Error',
+                [
+                    'message' => $exception->getMessage(),
+                ],
+                500
+            );
+
+        }
+
     }
 }

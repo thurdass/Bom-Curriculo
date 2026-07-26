@@ -9,4 +9,11 @@ enum UserLanguageLevelEnum: string
     case ADVANCED = 'advanced';
     case FLUENT = 'fluent';
     case NATIVE = 'native';
+
+    public static function toSelectArray(): array
+    {
+        return array_map(fn ($status) => [
+            'value' => $status->value,
+        ], self::cases());
+    }
 }
