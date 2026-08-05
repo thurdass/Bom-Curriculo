@@ -1,26 +1,27 @@
 name: Autofix (Pint / dart format)
 
-# Roda com permissoes de escrita e sem segredos de fork: so aceita PRs do
-# proprio repositorio (inclusive dependabot). Usa pull_request_target pra
-# poder commitar de volta no branch do PR mesmo quando ele veio de um
-# GITHUB_TOKEN somente-leitura (caso do dependabot em pull_request comum).
+# Runs with write permissions and no fork secrets: only accepts PRs from the
+# repository itself (including dependabot). Uses pull_request_target to be
+# able to push back to the PR branch even when it came in with a read-only
+# GITHUB_TOKEN (the case for dependabot on a regular pull_request).
 #
-# Push com identidade de app (recomendado): se os secrets AUTOFIX_APP_ID e
-# AUTOFIX_APP_PRIVATE_KEY existirem (GitHub App instalado no repo com
-# permissao de conteudo), o push usa o token do app. Runs disparados por um
-# app instalado nao caem na exigencia de aprovacao manual que o GITHUB_TOKEN
-# as vezes dispara, entao os checks reais (Pint --test, flutter analyze,
-# flutter test) re-rodam sozinhos no commit corrigido. Ver README do repo /
-# instrucoes enviadas ao dono pra criar o app e os secrets.
+# Push with an app identity (recommended): if the AUTOFIX_APP_ID and
+# AUTOFIX_APP_PRIVATE_KEY secrets exist (a GitHub App installed on the repo
+# with content permission), the push uses the app's token. Runs triggered by
+# an installed app don't fall under the manual-approval requirement that
+# GITHUB_TOKEN sometimes triggers, so the real checks (Pint --test,
+# flutter analyze, flutter test) re-run automatically on the fixed commit.
+# See the repo README / instructions sent to the owner to create the app
+# and secrets.
 #
-# Fallback sem app configurado: push com o GITHUB_TOKEN padrao (que nao
-# dispara pull_request de novo) + workflow_dispatch explicito logo em
-# seguida pra rodar Backend CI / Mobile CI no commit corrigido. Funciona,
-# mas pode ficar pendente de aprovacao manual dependendo da politica de
-# Actions do repo/organizacao.
+# Fallback without an app configured: push with the default GITHUB_TOKEN
+# (which does not trigger pull_request again) + an explicit workflow_dispatch
+# right after to run Backend CI / Mobile CI on the fixed commit. This works,
+# but may end up pending manual approval depending on the repo/org's
+# Actions policy.
 on:
   pull_request_target:
-    branches: [main, development]
+    branches: [development]
     paths:
       - "backend/**"
       - "mobile/**"
@@ -38,7 +39,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - name: Gerar token do GitHub App (se configurado)
+      - name: Generate GitHub App token (if configured)
         id: app-token
         if: ${{ vars.AUTOFIX_APP_ID != '' && secrets.AUTOFIX_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@v3
@@ -71,15 +72,15 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "style(backend): aplica Pint automaticamente"
+            git commit -m "style(backend): apply Pint automatically"
             git push origin HEAD:${{ github.event.pull_request.head.ref }}
             echo "pushed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Nada para corrigir."
+            echo "Nothing to fix."
             echo "pushed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Re-disparar Backend CI no commit corrigido (fallback sem app)
+      - name: Re-trigger Backend CI on the fixed commit (fallback without app)
         if: steps.commit.outputs.pushed == 'true' && steps.app-token.outcome != 'success'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -93,7 +94,7 @@ jobs:
       run:
         working-directory: mobile
     steps:
-      - name: Gerar token do GitHub App (se configurado)
+      - name: Generate GitHub App token (if configured)
         id: app-token
         if: ${{ vars.AUTOFIX_APP_ID != '' && secrets.AUTOFIX_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@v3
@@ -129,15 +130,15 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "style(mobile): aplica dart fix e dart format automaticamente"
+            git commit -m "style(mobile): apply dart fix and dart format automatically"
             git push origin HEAD:${{ github.event.pull_request.head.ref }}
             echo "pushed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Nada para corrigir."
+            echo "Nothing to fix."
             echo "pushed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Re-disparar Mobile CI no commit corrigido (fallback sem app)
+      - name: Re-trigger Mobile CI on the fixed commit (fallback without app)
         if: steps.commit.outputs.pushed == 'true' && steps.app-token.outcome != 'success'
         env:
           GH_TOKEN: ${{ github.token }}

@@ -2,12 +2,12 @@ name: Bot CI
 
 on:
   push:
-    branches: [main, development]
+    branches: [development]
     paths:
       - "bot/**"
       - ".github/workflows/bot-ci.yml"
   pull_request:
-    branches: [main, development]
+    branches: [development]
     paths:
       - "bot/**"
       - ".github/workflows/bot-ci.yml"

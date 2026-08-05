@@ -2,11 +2,11 @@ name: Security Audit
 
 on:
   push:
-    branches: [main, development]
+    branches: [development]
   pull_request:
-    branches: [main, development]
+    branches: [development]
   schedule:
-    # Toda segunda às 06:30 UTC
+    # Every Monday at 06:30 UTC
     - cron: "30 6 * * 1"
 
 permissions:
