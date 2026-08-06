@@ -46,7 +46,7 @@ export default function Login() {
 
             <img
               src="/logo.png"
-              alt="BomCurriculo"
+              alt="Bom Currículo"
               className="h-24 w-auto lg:h-32"
             />
 

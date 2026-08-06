@@ -53,18 +53,18 @@ export function Header() {
         <div className="flex items-center gap-2">
           <img
             src="/logo-dark.png"
-            alt="BomCurriculo"
+            alt="Bom Currículo"
             className="h-10 w-auto dark:hidden"
           />
 
           <img
             src="/logo.png"
-            alt="BomCurriculo"
+            alt="Bom Currículo"
             className="hidden h-10 w-auto dark:block"
           />
 
           <h1 className="text-xl font-bold md:text-2xl">
-            Bom<span className="text-brand-primary">Curriculo</span>
+            Bom<span className="text-brand-primary">Currículo</span>
           </h1>
         </div>
 

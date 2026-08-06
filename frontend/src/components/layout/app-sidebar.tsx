@@ -77,13 +77,13 @@ export default function AppSidebar() {
             <div className="flex gap-1">
               <img
                 src="/logo-dark.png"
-                alt="BomCurriculo"
+                alt="Bom Currículo"
                 className="h-10 w-auto dark:hidden"
               />
 
               <img
                 src="/logo.png"
-                alt="BomCurriculo"
+                alt="Bom Currículo"
                 className="hidden h-10 w-auto dark:block"
               />
               <h1 className="text-brand-secondary dark:text-white flex items-center text-xl gap-1 font-semibold">

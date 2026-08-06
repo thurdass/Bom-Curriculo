@@ -53,7 +53,7 @@ export default function Register() {
           <div className="mb-10 flex items-center gap-4">
             <div className="h-20 w-0.5 bg-white/60" />
 
-            <img src="/logo.png" alt="BomCurriculo" className="h-32 w-auto" />
+            <img src="/logo.png" alt="Bom Currículo" className="h-32 w-auto" />
 
             <div>
               <h1 className="text-5xl font-bold">

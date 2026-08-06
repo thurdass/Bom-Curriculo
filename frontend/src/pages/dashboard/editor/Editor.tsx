@@ -69,12 +69,12 @@ export default function Editor() {
                 <div className="flex items-center gap-1">
                     <img
                         src="/logo-dark.png"
-                        alt="BomCurriculo"
+                        alt="Bom Currículo"
                         className="h-8 w-auto dark:hidden"
                     />
                     <img
                         src="/logo.png"
-                        alt="BomCurriculo"
+                        alt="Bom Currículo"
                         className="hidden h-8 w-auto dark:block"
                     />
                     <span className="text-lg font-semibold text-brand-secondary dark:text-white">
