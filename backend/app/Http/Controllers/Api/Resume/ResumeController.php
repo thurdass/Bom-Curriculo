@@ -35,8 +35,8 @@ class ResumeController extends Controller
                 mediaType: 'multipart/form-data',
                 schema: new OA\Schema(
                     properties: [
-                        new OA\Property(property: 'resume_cv', type: 'string', format: 'binary', description: 'PDF/DOC/DOCX, até 10MB'),
-                        new OA\Property(property: 'resume_linkedin', type: 'string', format: 'binary', description: 'PDF/DOC/DOCX, até 10MB'),
+                        new OA\Property(property: 'resume_cv', type: 'string', format: 'binary', description: 'PDF/DOCX, até 10MB'),
+                        new OA\Property(property: 'resume_linkedin', type: 'string', format: 'binary', description: 'PDF, até 10MB'),
                         new OA\Property(property: 'github_link', type: 'string', nullable: true),
                         new OA\Property(property: 'site_link', type: 'string', nullable: true),
                         new OA\Property(

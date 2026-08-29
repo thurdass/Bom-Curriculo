@@ -20,7 +20,7 @@ export interface AnalyticHeader {
   email?: string | null;
   location?: string | null;
   contacts?: string[] | string | null;
-  emails?: string[] | null;
+  emails?: string | string[] | null;
   links?: Record<string, string>;
   summary?: string | null;
   [key: string]: unknown;

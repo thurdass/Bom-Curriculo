@@ -9,7 +9,7 @@ const analytic: ResumeAnalytic = {
   user_resume_id: "resume-uuid",
   status: "analyze",
   error: null,
-  header: { name: "Pedro Aruanã" },
+  header: { name: "Pedro Aruanã", emails: "pedro@example.com" },
   experiences: [
     { company: "WhiteHats", role: "Dev", start: "2023-01", end: "2026-01", is_actual: false },
     { company: "Bom Currículo", role: "Voluntário", start: "2025-01", end: null, is_actual: true },
@@ -63,7 +63,7 @@ describe("filterAnalyticBySelection", () => {
   it("always passes header and others through untouched", () => {
     const filtered = filterAnalyticBySelection(analytic, []);
 
-    expect(filtered.header).toEqual({ name: "Pedro Aruanã" });
+    expect(filtered.header).toEqual({ name: "Pedro Aruanã", emails: "pedro@example.com" });
     expect(filtered.others).toEqual({ score: 85 });
   });
 });

@@ -97,7 +97,7 @@ export default function NewResume() {
     e.preventDefault();
 
     if (!resumePdf) {
-      toast.error('Por favor, anexe o PDF do seu currículo atual (obrigatório).');
+      toast.error('Por favor, anexe o PDF ou DOCX do seu currículo atual (obrigatório).');
       return;
     }
 
@@ -116,7 +116,7 @@ export default function NewResume() {
       <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-8 shadow-[0_4px_12px_rgba(0,0,0,0.03)]">
 
         <section className="mb-5">
-          <h2 className="mb-4 text-lg font-semibold text-slate-800">1. Documentos PDF</h2>
+          <h2 className="mb-4 text-lg font-semibold text-slate-800">1. Documentos</h2>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
 
             <div className="flex flex-col gap-2">
@@ -126,14 +126,14 @@ export default function NewResume() {
               <div className="cursor-pointer rounded-[10px] border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3">
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf,.docx"
                   id="resume_pdf"
                   className="hidden"
                   onChange={handleResumeChange}
                 />
                 <label htmlFor="resume_pdf" className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-600">
                   <Upload size={20} color="#2563eb" />
-                  <span>{resumePdf ? resumePdf.name : 'Selecionar arquivo (PDF, DOC ou DOCX)'}</span>
+                  <span>{resumePdf ? resumePdf.name : 'Selecionar arquivo (PDF ou DOCX)'}</span>
                 </label>
               </div>
             </div>
@@ -143,7 +143,7 @@ export default function NewResume() {
               <div className="cursor-pointer rounded-[10px] border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3">
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf"
                   id="linkedin_pdf"
                   className="hidden"
                   onChange={handleLinkedinChange}
