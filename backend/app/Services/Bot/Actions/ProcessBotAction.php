@@ -35,6 +35,7 @@ class ProcessBotAction
                 // Atualiza o status da análise do currículo
                 $resume->update([
                     'status' => UserResumeEnum::ANALYZE,
+                    'observation' => null,
                 ]);
 
                 // Cria ou atualiza a análise do currículo

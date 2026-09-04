@@ -9,8 +9,8 @@ class NewResumeRequest extends CustomRequest
     public function rules(): array
     {
         return [
-            'resume_cv' => ['required', 'file', 'mimes:pdf,doc,docx', 'min:5', 'max:10240'],
-            'resume_linkedin' => ['file', 'mimes:pdf,doc,docx', 'min:5', 'max:10240'],
+            'resume_cv' => ['required', 'file', 'mimes:pdf,docx', 'min:5', 'max:10240'],
+            'resume_linkedin' => ['file', 'mimes:pdf', 'min:5', 'max:10240'],
             'github_link' => ['nullable', 'string', 'min:9', 'max:255'],
             'site_link' => ['nullable', 'string', 'min:9', 'max:255'],
             'skills' => ['nullable', 'array'],

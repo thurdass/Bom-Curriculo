@@ -92,8 +92,13 @@
         <p>{{ $resume->header['location'] ?? '' }}</p>
 
 
-        <p>{{ implode(' / ', $resume->header['emails'] ?? []) }}</p>
-        <p>{{ implode(' / ', $resume->header['contacts'] ?? []) }}</p>
+        @php
+            $emails = $resume->header['emails'] ?? null;
+            $contacts = $resume->header['contacts'] ?? null;
+        @endphp
+
+        <p>{{ is_array($emails) ? implode(' / ', $emails) : ($emails ?? '') }}</p>
+        <p>{{ is_array($contacts) ? implode(' / ', $contacts) : ($contacts ?? '') }}</p>
 
         @if(isset($resume->header['links']))
 
@@ -216,7 +221,7 @@
 
                         <strong>Técnologias:</strong>
 
-                        {{ implode(', ', $project['technologies']) }}
+                        {{ is_array($project['technologies']) ? implode(', ', $project['technologies']) : $project['technologies'] }}
 
                     </p>
 
