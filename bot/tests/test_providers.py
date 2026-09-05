@@ -52,15 +52,50 @@ CONFIGURED_DEFAULT_MODELS = {
     "gemini": "gemini-3.5-flash",
     "deepseek": "deepseek-v4-flash",
     "openai": "gpt-5.5",
-    "ollama": "qwen3:8b",
+    "ollama": "qwen3:4b",
 }
 
 
 @pytest.mark.parametrize("name,expected_model", CONFIGURED_DEFAULT_MODELS.items())
-def test_config_yaml_default_models_match_expected(name, expected_model) -> None:
+def test_config_yaml_default_models_match_expected(name, expected_model, monkeypatch) -> None:
+    monkeypatch.delenv("OLLAMA_MODEL", raising=False)
     settings = Settings.load()
 
     assert settings.ai.providers[name].model == expected_model
+
+
+def test_ollama_environment_overrides_yaml_configuration(monkeypatch) -> None:
+    monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama.internal:11434")
+    monkeypatch.setenv("OLLAMA_MODEL", "custom-model:latest")
+    monkeypatch.setenv("OLLAMA_REASONING", "true")
+    monkeypatch.setenv("OLLAMA_NUM_PREDICT", "3072")
+    monkeypatch.setenv("BOT_INFERENCE_DEADLINE_SECONDS", "75")
+
+    settings = Settings.load()
+
+    assert settings.ai.providers["ollama"].base_url == "http://ollama.internal:11434"
+    assert settings.ai.providers["ollama"].model == "custom-model:latest"
+    assert settings.ai.providers["ollama"].reasoning is True
+    assert settings.ai.providers["ollama"].max_output_tokens == 3072
+    assert settings.ai.inference_deadline_seconds == 75
+
+
+def test_ollama_local_defaults_disable_reasoning_and_bound_output(monkeypatch) -> None:
+    for variable in (
+        "OLLAMA_MODEL",
+        "OLLAMA_REASONING",
+        "OLLAMA_NUM_PREDICT",
+        "BOT_INFERENCE_DEADLINE_SECONDS",
+    ):
+        monkeypatch.delenv(variable, raising=False)
+
+    settings = Settings.load()
+    ollama = settings.ai.providers["ollama"]
+
+    assert ollama.model == "qwen3:4b"
+    assert ollama.reasoning is False
+    assert ollama.max_output_tokens == 2048
+    assert settings.ai.inference_deadline_seconds == 240
 
 
 def test_provider_unknown_returns_error() -> None:

@@ -1,9 +1,7 @@
 """Builds the prompt used to ask the AI for an ATS quality score of a resume as-is."""
 
-import json
-
 from app.models.github_profile import GitHubProfile
-from app.models.resume_analysis import ResumeScoreResult, SkillItem
+from app.models.resume_analysis import SkillItem
 from app.services.ai.prompt_sources import build_source_sections
 
 
@@ -16,7 +14,6 @@ def build_resume_score_prompt(
     portfolio_url: str | None = None,
     additional_skills: list[SkillItem] | None = None,
 ) -> str:
-    schema = ResumeScoreResult.model_json_schema()
     instructions = (
         "You are an ATS (Applicant Tracking System) evaluation expert. Read the resume "
         "text below — and the supporting sources after it, if any — and judge how "
@@ -24,7 +21,7 @@ def build_resume_score_prompt(
         "restructure, or extract the resume — only evaluate it. Produce a 0-100 score "
         "and one direct, actionable improvement suggestion. "
         f"Write the suggestion in {output_language}. "
-        f"Return only valid JSON matching this schema: {json.dumps(schema, ensure_ascii=False)}"
+        "Return only the structured JSON response, without Markdown or commentary."
     )
 
     sources = build_source_sections(

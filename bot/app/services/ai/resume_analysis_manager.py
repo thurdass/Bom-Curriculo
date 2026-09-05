@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from collections.abc import Callable
 from typing import TypeVar
 
@@ -13,6 +15,8 @@ from app.services.ai.interfaces import ResumeAnalysisManagerInterface
 from app.services.ai.resume_builder_prompt import build_resume_construction_prompt
 from app.services.ai.resume_score_prompt import build_resume_score_prompt
 
+logger = logging.getLogger(__name__)
+
 _ERROR_MESSAGES = {
     "missing_api_key": "{label} has no minimal configuration.",
     "auth_error_401": "{label} rejected the authentication.",
@@ -27,6 +31,7 @@ _ERROR_MESSAGES = {
     "json_truncated": "{label} returned apparently truncated JSON.",
     "empty_response": "{label} returned an empty response.",
     "schema_validation_error": "{label} returned data outside the expected schema.",
+    "response_parsing_error": "{label} returned a response that could not be parsed.",
     "provider_unavailable": "{label} is temporarily unavailable.",
     "unknown_provider_error": "{label} returned an unclassified error.",
 }
@@ -130,6 +135,30 @@ class ResumeAnalysisManager(ResumeAnalysisManagerInterface):
         factory: Callable[[str], AIProvider] | None,
     ) -> _SchemaT:
         factory = factory or self._provider_factory.create
+        try:
+            return await asyncio.wait_for(
+                self._run_provider_chain(prompt, schema, factory),
+                timeout=self._settings.ai.inference_deadline_seconds,
+            )
+        except TimeoutError as error:
+            logger.warning(
+                "AI inference deadline exceeded.",
+                exc_info=True,
+                extra={
+                    "error_category": "timeout",
+                    "inference_deadline_seconds": self._settings.ai.inference_deadline_seconds,
+                },
+            )
+            raise AIProviderError(
+                "AI inference exceeded the time limit.", category="timeout"
+            ) from error
+
+    async def _run_provider_chain(
+        self,
+        prompt: str,
+        schema: type[_SchemaT],
+        factory: Callable[[str], AIProvider],
+    ) -> _SchemaT:
         last_error: AIProviderError | None = None
 
         for name in self.get_provider_chain():
@@ -140,7 +169,21 @@ class ResumeAnalysisManager(ResumeAnalysisManagerInterface):
                 provider = factory(name)
                 result = await provider.run_structured(prompt, schema, temperature=0.2)
             except Exception as error:
-                last_error = self._safe_error(name, error)
+                safe_error = self._safe_error(name, error)
+                provider_settings = self._settings.ai.providers.get(name)
+                logger.warning(
+                    "AI provider attempt failed.",
+                    exc_info=True,
+                    extra={
+                        "provider_name": name,
+                        "error_category": safe_error.category,
+                        "provider_status": safe_error.status_http,
+                        "exception_type": type(error).__name__,
+                        "model_name": getattr(provider_settings, "model", None),
+                        "provider_base_url": getattr(provider_settings, "base_url", None),
+                    },
+                )
+                last_error = safe_error
                 continue
 
             if isinstance(result, schema):

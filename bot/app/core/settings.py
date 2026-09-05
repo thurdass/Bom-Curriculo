@@ -2,9 +2,8 @@
 
 Non-secret values are read from ``config.yaml``. Secrets (API keys) are read
 only from the environment / ``.env`` and are never written to the YAML file.
-A handful of legacy environment variables (``IA_PROVIDER``, ...) still
-override their ``config.yaml`` counterpart, preserving current deployment
-behavior.
+Operational environment variables (``IA_PROVIDER``, ``OLLAMA_BASE_URL``, ...)
+can override their ``config.yaml`` counterpart for each deployment.
 """
 
 from __future__ import annotations
@@ -34,6 +33,8 @@ class ProviderSettings:
     timeout_seconds: float
     api_key: str = ""
     base_url: str | None = None
+    reasoning: bool | None = None
+    max_output_tokens: int | None = None
 
     def is_configured(self) -> bool:
         if self.base_url is not None:
@@ -48,6 +49,7 @@ class AISettings:
     provider: str
     provider_chain: tuple[str, ...]
     providers: dict[str, ProviderSettings] = field(default_factory=dict)
+    inference_deadline_seconds: float = 240.0
 
 
 @dataclass(frozen=True)
@@ -99,15 +101,29 @@ class Settings:
 
     @staticmethod
     def _build_ai_settings(raw: dict) -> AISettings:
-        providers = {
-            name: ProviderSettings(
-                model=provider_raw["model"],
+        providers: dict[str, ProviderSettings] = {}
+        for name, provider_raw in (raw.get("providers") or {}).items():
+            model = provider_raw["model"]
+            base_url = provider_raw.get("base_url")
+            reasoning = provider_raw.get("reasoning")
+            max_output_tokens = provider_raw.get("num_predict")
+
+            if name == "ollama":
+                model = os.getenv("OLLAMA_MODEL", model)
+                base_url = os.getenv("OLLAMA_BASE_URL", base_url)
+                reasoning = _env_flag("OLLAMA_REASONING", bool(reasoning))
+                max_output_tokens = int(
+                    os.getenv("OLLAMA_NUM_PREDICT", max_output_tokens or 2048)
+                )
+
+            providers[name] = ProviderSettings(
+                model=model,
                 timeout_seconds=float(provider_raw.get("timeout_seconds", 120.0)),
                 api_key=os.getenv(_PROVIDER_KEY_ENV_VARS.get(name, ""), ""),
-                base_url=provider_raw.get("base_url"),
+                base_url=base_url,
+                reasoning=reasoning,
+                max_output_tokens=max_output_tokens,
             )
-            for name, provider_raw in (raw.get("providers") or {}).items()
-        }
         default_chain = ",".join(raw.get("provider_chain") or [])
         chain = tuple(
             item.strip().lower()
@@ -120,6 +136,12 @@ class Settings:
             provider=os.getenv("IA_PROVIDER", raw.get("provider", "auto")).strip().lower(),
             provider_chain=chain,
             providers=providers,
+            inference_deadline_seconds=float(
+                os.getenv(
+                    "BOT_INFERENCE_DEADLINE_SECONDS",
+                    raw.get("inference_deadline_seconds", 240.0),
+                )
+            ),
         )
 
 

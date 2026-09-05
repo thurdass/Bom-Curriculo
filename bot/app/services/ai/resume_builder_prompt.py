@@ -1,10 +1,9 @@
 """Builds the prompt used to ask the AI to construct the best possible ATS-optimized resume."""
 
-import json
 from datetime import date
 
 from app.models.github_profile import GitHubProfile
-from app.models.resume_analysis import BuiltResumeResult, SkillItem
+from app.models.resume_analysis import SkillItem
 from app.services.ai.prompt_sources import build_source_sections
 
 
@@ -17,7 +16,6 @@ def build_resume_construction_prompt(
     portfolio_url: str | None = None,
     additional_skills: list[SkillItem] | None = None,
 ) -> str:
-    schema = BuiltResumeResult.model_json_schema()
     instructions = (
         f"Today's date is {date.today().isoformat()}. "
         "You are an ATS and resume-writing expert. Read the resume text below — and "
@@ -38,7 +36,7 @@ def build_resume_construction_prompt(
         "sources, never fabricated. Also produce a 0-100 score for how well-written and "
         "ATS-friendly the constructed resume is. "
         f"Write the professional_summary in {output_language}. "
-        f"Return only valid JSON matching this schema: {json.dumps(schema, ensure_ascii=False)}"
+        "Return only the structured JSON response, without Markdown or commentary."
     )
 
     sources = build_source_sections(
