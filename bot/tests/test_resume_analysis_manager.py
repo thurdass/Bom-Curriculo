@@ -1,7 +1,9 @@
 import asyncio
+import time
 
 import pytest
 
+from app.core.settings import AISettings, ServerSettings, Settings
 from app.models.resume_analysis import BuiltResumeResult, ResumeHeader, ResumeScoreResult, SkillItem
 from app.providers.base import AIProviderError
 from app.providers.mock import MockProvider
@@ -157,6 +159,75 @@ def test_provider_failure_is_sanitized(monkeypatch, category, status) -> None:
     assert captured.value.category == category
     assert captured.value.status_http == status
     assert "detail interno" not in str(captured.value)
+
+
+def test_provider_failure_logs_original_exception_but_returns_sanitized_error(
+    monkeypatch, caplog
+) -> None:
+    monkeypatch.setenv("IA_PROVIDER", "groq")
+    monkeypatch.setenv("GROQ_API_KEY", "chave-ficticia-para-teste")
+
+    class FailingProvider(ProviderFake):
+        async def run_structured(self, prompt, schema, temperature=0.2):
+            raise AIProviderError(
+                "internal provider diagnostic 5c72",
+                category="network_error",
+            )
+
+    with caplog.at_level("WARNING", logger="app.services.ai.resume_analysis_manager"):
+        with pytest.raises(AIProviderError) as captured:
+            asyncio.run(
+                ResumeAnalysisManager().build_resume(
+                    RESUME_TEXT, lambda name: FailingProvider(name)
+                )
+            )
+
+    assert str(captured.value) == "Could not connect to Groq."
+    assert "internal provider diagnostic 5c72" not in str(captured.value)
+    assert "internal provider diagnostic 5c72" in caplog.text
+    assert caplog.records[-1].provider_name == "groq"
+    assert caplog.records[-1].error_category == "network_error"
+    assert caplog.records[-1].model_name == "openai/gpt-oss-120b"
+
+
+def test_total_inference_deadline_cancels_active_generation_and_is_sanitized(caplog) -> None:
+    settings = Settings(
+        server=ServerSettings(host="127.0.0.1", port=8000, log_level="INFO"),
+        ai=AISettings(
+            enabled_by_default=True,
+            output_language="pt-BR",
+            provider="mock",
+            provider_chain=("mock",),
+            inference_deadline_seconds=0.02,
+        ),
+    )
+    was_cancelled = False
+
+    class SlowProvider(MockProvider):
+        async def run_structured(self, prompt, schema, temperature=0.2):
+            nonlocal was_cancelled
+            try:
+                await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                was_cancelled = True
+                raise
+            return make_built()
+
+    started_at = time.monotonic()
+    with caplog.at_level("WARNING", logger="app.services.ai.resume_analysis_manager"):
+        with pytest.raises(AIProviderError) as captured:
+            asyncio.run(
+                ResumeAnalysisManager(settings=settings).build_resume(
+                    RESUME_TEXT, lambda _name: SlowProvider()
+                )
+            )
+
+    assert time.monotonic() - started_at < 0.5
+    assert was_cancelled is True
+    assert captured.value.category == "timeout"
+    assert str(captured.value) == "AI inference exceeded the time limit."
+    assert captured.value.__cause__ is not None
+    assert "AI inference deadline exceeded." in caplog.text
 
 
 def test_merges_github_and_portfolio_into_header_links_regardless_of_ai_output(monkeypatch) -> None:

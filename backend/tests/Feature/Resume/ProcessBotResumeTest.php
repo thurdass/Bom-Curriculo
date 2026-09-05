@@ -93,8 +93,14 @@ it('persists and returns only the real successful bot build response', function 
     ]);
     $botPayload = uniqueBotResumePayload();
     $multipart = [];
+    $requestOptions = [];
 
-    Http::fake(function (ClientRequest $request) use (&$multipart, $botPayload) {
+    Http::fake(function (ClientRequest $request, array $options) use (&$multipart, &$requestOptions, $botPayload) {
+        $requestOptions[$request->url()] = [
+            'connect_timeout' => $options['connect_timeout'],
+            'timeout' => $options['timeout'],
+        ];
+
         if ($request->url() === 'https://resume-bot.test/health') {
             return Http::response(['status' => 'online'], 200);
         }
@@ -155,6 +161,12 @@ it('persists and returns only the real successful bot build response', function 
         ->and($multipart['portfolio_url']['contents'])->toBe('https://portfolio.example.test')
         ->and(json_decode($multipart['additional_skills']['contents'], true))->toBe([
             ['name' => 'Rust', 'years' => 7],
+        ])->and($requestOptions['https://resume-bot.test/health'])->toBe([
+            'connect_timeout' => 5.0,
+            'timeout' => 5.0,
+        ])->and($requestOptions['https://resume-bot.test/api/v1/build'])->toBe([
+            'connect_timeout' => 5.0,
+            'timeout' => 260.0,
         ]);
 
     Http::assertSentCount(2);
@@ -268,11 +280,12 @@ it('returns service unavailable and marks the resume failed on a connection or t
     $this->withHeaders($auth['headers'])
         ->postJson('/api/client/services/bot/process', ['user_resume_id' => $resume->id])
         ->assertServiceUnavailable()
-        ->assertJsonPath('data.message', $message);
+        ->assertJsonPath('data.message', 'Bot service is unavailable.')
+        ->assertJsonMissing(['message' => $message]);
 
     expect(ResumeAnalytic::query()->count())->toBe(0)
         ->and($resume->fresh()->status)->toBe(UserResumeEnum::FAIL)
-        ->and($resume->fresh()->observation)->toBe($message);
+        ->and($resume->fresh()->observation)->toBe('Bot service is unavailable.');
 })->with([
     'connection failure' => 'CONNECTION FAILURE 8ce2',
     'timeout' => 'BOT REQUEST TIMED OUT 52b1',

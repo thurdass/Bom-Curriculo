@@ -252,16 +252,46 @@ cp .env.example .env                 # secrets
 
 `config.yaml` holds every non-secret setting (provider models/timeouts,
 provider chain, log level, AI output language) — see `config.yaml.example`
-for the full, commented structure. `.env` holds secrets only:
+for the full, commented structure. `.env` holds secrets and
+deployment-specific overrides:
 
 - `GROQ_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`
 - `GITHUB_TOKEN` — optional, raises the GitHub REST API rate limit for
   **GitHub enrichment** above (unauthenticated works fine, just at a lower
   limit).
 
-A few legacy operational environment variables still override their
-`config.yaml` counterpart for per-deployment flexibility: `IA_PROVIDER`,
-`IA_PROVIDER_CHAIN`, `USAR_IA_PADRAO`, `LOG_LEVEL`.
+Operational environment variables can override selected `config.yaml` values
+for per-deployment flexibility: `IA_PROVIDER`, `IA_PROVIDER_CHAIN`,
+`USAR_IA_PADRAO`, `LOG_LEVEL`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`,
+`OLLAMA_REASONING`, `OLLAMA_NUM_PREDICT`, and
+`BOT_INFERENCE_DEADLINE_SECONDS`.
+
+When the bot runs directly on the host, the example configuration connects to
+Ollama at `http://127.0.0.1:11434`. The root Docker Compose stack instead sets
+`OLLAMA_BASE_URL=http://ollama:11434`, starts an Ollama service, and downloads
+`OLLAMA_MODEL` (default `qwen3:4b`, about 2.5 GB) before starting the bot. This
+smaller member of the same Qwen3 family is the CPU-oriented development
+default; `qwen3:8b` remains available by setting `OLLAMA_MODEL` and requires a
+download of about 5.2 GB. Do not use
+`localhost` to reach a host-side Ollama instance from inside the bot container;
+use an address that is routable from that container.
+
+For resume build and analysis, Ollama defaults to `reasoning: false` and
+`num_predict: 2048`. LangChain still sends the Pydantic JSON Schema through
+`with_structured_output`; the prompt does not repeat that schema as text. The
+120-second Ollama HTTP setting is an inactivity timeout. The separate
+240-second inference deadline is a wall-clock limit over the complete provider
+chain, including active token generation. The root stack then gives Laravel
+260 seconds and Nginx 280 seconds, leaving each inner layer time to return a
+structured response before the next layer closes the connection.
+
+For a host-side setup, install/start Ollama and make the configured model
+available before starting the bot:
+
+```bash
+ollama pull qwen3:4b
+ollama list
+```
 
 If `config.yaml` is missing entirely, `Settings.load()` falls back to empty
 non-secret configuration (no provider models/timeouts) rather than failing
@@ -274,7 +304,8 @@ Supported providers are Groq, Gemini, DeepSeek, OpenAI, Ollama, and Mock, all
 built by `ProviderFactory` from `config.yaml`. Selection defaults to `auto`
 (walks `ai.provider_chain` in order, skipping unconfigured providers, trying
 the next one on failure or an invalid structured response).
-Provider failures are sanitized before logging or returning diagnostics.
+Provider failures are logged internally with their exception chain and are
+sanitized before an error is returned to API clients.
 
 Resume text is sent to the configured provider as-is — the bot does not
 strip personal data before this call, since the AI is asked to return the

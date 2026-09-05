@@ -40,4 +40,6 @@ class ProviderFactory(ProviderFactoryInterface):
             base_url=provider_settings.base_url,
             timeout=provider_settings.timeout_seconds,
             output_language=self._settings.ai.output_language,
+            reasoning=provider_settings.reasoning,
+            max_output_tokens=provider_settings.max_output_tokens,
         )

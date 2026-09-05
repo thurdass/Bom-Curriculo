@@ -32,6 +32,8 @@ class LangChainProvider(AIProvider):
         base_url: str | None = None,
         timeout: float = 120.0,
         output_language: str = "pt-BR",
+        reasoning: bool | None = None,
+        max_output_tokens: int | None = None,
     ) -> None:
         if name not in _MODEL_PROVIDERS:
             raise AIProviderError(f"Unsupported provider '{name}'.", category="invalid_model")
@@ -41,6 +43,8 @@ class LangChainProvider(AIProvider):
         self.name = name
         self.model = model
         self.output_language = output_language
+        self.reasoning = reasoning
+        self.max_output_tokens = max_output_tokens
         self._chat_model = init_chat_model(
             model,
             model_provider=_MODEL_PROVIDERS[name],
@@ -56,7 +60,21 @@ class LangChainProvider(AIProvider):
     async def run_structured(
         self, prompt: str, schema: type[BaseModel], temperature: float = 0.2
     ) -> BaseModel | None:
-        structured_model = self._chat_model.bind(temperature=temperature).with_structured_output(schema)
+        if self.name == "ollama":
+            ollama_options = {"temperature": temperature}
+            if self.max_output_tokens is not None:
+                ollama_options["num_predict"] = self.max_output_tokens
+            # Apply Ollama invocation options after structured output. ChatOllama's
+            # with_structured_output() creates its own binding for `format`; applying
+            # it second would replace reasoning/options instead of combining them.
+            structured_model = self._chat_model.with_structured_output(schema).bind(
+                reasoning=False if self.reasoning is None else self.reasoning,
+                options=ollama_options,
+            )
+        else:
+            structured_model = self._chat_model.bind(
+                temperature=temperature
+            ).with_structured_output(schema)
         try:
             result = await structured_model.ainvoke(prompt)
         except Exception as error:

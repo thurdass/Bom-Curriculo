@@ -9,6 +9,9 @@ server:
 
 ai:
   enabled_by_default: true
+  # Total wall-clock budget for the complete provider chain. Unlike the
+  # transport timeout below, this also stops an active token generation.
+  inference_deadline_seconds: 240.0
   # Language the AI is instructed to write end-user-facing text in.
   output_language: "pt-BR"
   # "auto" walks provider_chain in order, skipping unconfigured providers.
@@ -29,6 +32,19 @@ ai:
       model: "gpt-5.5"
       timeout_seconds: 120.0
     ollama:
-      model: "qwen3:8b"
-      base_url: "http://localhost:11434"
+      # The 4B model is the local-development default. qwen3:8b remains
+      # available through OLLAMA_MODEL on machines with more CPU/RAM budget.
+      model: "qwen3:4b"
+      # Default for running the bot directly on the host. Docker Compose
+      # overrides this with http://ollama:11434 through OLLAMA_BASE_URL.
+      base_url: "http://127.0.0.1:11434"
+      # Resume extraction does not benefit enough from hidden chain-of-thought
+      # to justify its CPU latency. This maps to ChatOllama(reasoning=False).
+      reasoning: false
+      # A dense representative resume completed naturally at 1789 tokens, and
+      # a second valid sample at 1932. This leaves measured headroom without
+      # allowing unbounded generation or exhausting the 4096-token context.
+      num_predict: 2048
+      # HTTP transport inactivity timeout; the total inference deadline above
+      # is the wall-clock limit for an active generation.
       timeout_seconds: 120.0

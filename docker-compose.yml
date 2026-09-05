@@ -21,6 +21,38 @@ services:
     networks:
       - bomcurriculo
 
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.33.3}
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - OLLAMA_HOST=http://127.0.0.1:11434 ollama list >/dev/null 2>&1
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - bomcurriculo
+
+  ollama-model:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.33.3}
+    restart: "no"
+    environment:
+      OLLAMA_HOST: ${OLLAMA_BASE_URL:-http://ollama:11434}
+    command:
+      - pull
+      - "${OLLAMA_MODEL:-qwen3:4b}"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - bomcurriculo
+
   backend:
     build:
       context: ./backend
@@ -30,7 +62,10 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      BOT_URL: http://bot:8000
+      BOT_URL: ${BOT_URL:-http://bot:8000}
+      BOT_CONNECT_TIMEOUT_SECONDS: ${BOT_CONNECT_TIMEOUT_SECONDS:-5}
+      BOT_HEALTH_TIMEOUT_SECONDS: ${BOT_HEALTH_TIMEOUT_SECONDS:-5}
+      BOT_TIMEOUT_SECONDS: ${BOT_TIMEOUT_SECONDS:-260}
     ports:
       - "${BACKEND_PORT:-9000}:9000"
     volumes:
@@ -60,6 +95,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./bot/.env
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
+      OLLAMA_REASONING: ${OLLAMA_REASONING:-false}
+      OLLAMA_NUM_PREDICT: ${OLLAMA_NUM_PREDICT:-2048}
+      BOT_INFERENCE_DEADLINE_SECONDS: ${BOT_INFERENCE_DEADLINE_SECONDS:-240}
     ports:
       - "${BOT_PORT:-8000}:8000"
     healthcheck:
@@ -72,6 +113,9 @@ services:
       timeout: 5s
       retries: 12
       start_period: 20s
+    depends_on:
+      ollama-model:
+        condition: service_completed_successfully
     networks:
       - bomcurriculo
 
@@ -111,3 +155,4 @@ networks:
 volumes:
   postgres_data:
   backend_storage:
+  ollama_data:

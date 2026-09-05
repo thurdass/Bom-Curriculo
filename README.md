@@ -89,11 +89,39 @@ Copy-Item bot/.env.example bot/.env
 docker compose up --build
 ```
 
+The Docker stack includes Ollama and automatically downloads the model defined
+by `OLLAMA_MODEL` (default: `qwen3:4b`) into the persistent `ollama_data`
+volume. The first startup can take several minutes because that model is about
+2.5 GB. The bot reaches Ollama through the Docker network at
+`http://ollama:11434`; it does not use the bot container's `localhost`.
+
+The local default favors CPU-only development. Resume requests disable Qwen's
+thinking mode, cap generated output at 2048 tokens, and stop the complete AI
+provider chain after 240 seconds. Laravel waits up to 260 seconds for the bot,
+while Nginx waits up to 280 seconds, allowing a bot timeout to reach the client
+as a structured response. On a Ryzen 7 5700G, a representative dense resume
+completed with `qwen3:4b` in about 209 seconds; slower CPU-only machines may
+still need a faster external provider or an asynchronous workflow.
+
+To confirm that the model is available or download it again:
+
+```bash
+docker compose exec ollama ollama list
+docker compose exec ollama ollama pull qwen3:4b
+```
+
+Set `OLLAMA_MODEL` in the root `.env` before starting the stack to use another
+model. `OLLAMA_BASE_URL` may point the bot at an external Ollama deployment
+instead, but its address must be reachable from inside the bot container. For
+better local quality on sufficiently fast hardware, set `OLLAMA_MODEL=qwen3:8b`;
+that model is about 5.2 GB and remains fully supported.
+
 Services:
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:9000
 - Bot: http://localhost:8000
+- Ollama: http://localhost:11434
 
 Health endpoints:
 

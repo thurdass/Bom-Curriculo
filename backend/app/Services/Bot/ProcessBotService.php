@@ -20,6 +20,12 @@ class ProcessBotService
 {
     private string $baseUrl;
 
+    private float $connectTimeout;
+
+    private float $healthTimeout;
+
+    private float $requestTimeout;
+
     public function __construct(
         private $http = null,
         public string $endpointBase = 'api/v1'
@@ -27,6 +33,9 @@ class ProcessBotService
         $config = config('services.bot');
 
         $this->baseUrl = rtrim($config['url'] ?? '', '/');
+        $this->connectTimeout = (float) ($config['connect_timeout_seconds'] ?? 5);
+        $this->healthTimeout = (float) ($config['health_timeout_seconds'] ?? 5);
+        $this->requestTimeout = (float) ($config['timeout_seconds'] ?? 260);
     }
 
     protected function checkHealth($http): void
@@ -69,13 +78,17 @@ class ProcessBotService
             }
 
             $this->checkHealth(
-                Http::acceptJson()->baseUrl($this->baseUrl)
+                Http::acceptJson()
+                    ->connectTimeout($this->connectTimeout)
+                    ->timeout($this->healthTimeout)
+                    ->baseUrl($this->baseUrl)
             );
 
             $endpointBase = trim($this->endpointBase, '/');
-            $this->http = Http::acceptJson()->baseUrl(
-                $this->baseUrl.'/'.$endpointBase
-            );
+            $this->http = Http::acceptJson()
+                ->connectTimeout($this->connectTimeout)
+                ->timeout($this->requestTimeout)
+                ->baseUrl($this->baseUrl.'/'.$endpointBase);
 
             $callback = (new PublishBotAction(
                 $this->http,
@@ -110,7 +123,13 @@ class ProcessBotService
             ], $this->errorStatus($statusCode));
 
         } catch (ConnectionException $exception) {
-            $message = $this->errorMessage(null, $exception->getMessage());
+            Log::error('Bot service connection failed.', [
+                'user_resume_id' => $resume->id,
+                'bot_url' => $this->baseUrl,
+                'exception' => $exception,
+            ]);
+
+            $message = 'Bot service is unavailable.';
 
             $this->markFailed($resume, $message);
 
