@@ -11,13 +11,14 @@ use Throwable;
 
 final class OllamaClient
 {
-    public function generate(array $messages): array
+    public function generate(array $messages, ?string $resumeId = null): array
     {
         $config = config('resume.ollama');
         $started = hrtime(true);
         $context = [
             'request_id' => (string) Str::uuid(), 'provider' => 'ollama',
             'requested_model' => $config['model'], 'prompt_version' => ResumePrompt::VERSION,
+            'user_resume_id' => $resumeId,
         ];
         try {
             if (empty($config['url']) || empty($config['model']) || $config['num_predict'] < 1

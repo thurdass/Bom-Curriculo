@@ -4,6 +4,7 @@ namespace App\Services\Resume;
 
 use App\Models\User;
 use App\Models\UserResume;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 final class OllamaResumeGenerator implements ResumeGenerator
@@ -16,11 +17,13 @@ final class OllamaResumeGenerator implements ResumeGenerator
 
     public function generate(UserResume $resume, User $user): array
     {
+        $started = hrtime(true);
         $sources = $this->preparer->prepare($resume, $user);
+        $prepared = hrtime(true);
         if (mb_strlen(json_encode($sources, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)) > config('resume.ollama.max_source_characters')) {
             throw new RuntimeException('The documents exceed the configured generation input limit.', 422);
         }
-        $payload = $this->client->generate($this->prompt->messages($sources));
+        $payload = $this->client->generate($this->prompt->messages($sources), $resume->id);
 
         // User-provided facts take precedence over model guesses, as in the Python builder.
         $links = (array) $payload['header']['links'];
@@ -47,6 +50,13 @@ final class OllamaResumeGenerator implements ResumeGenerator
             }
         }
 
-        return ResumePayload::validate($payload);
+        $payload = ResumePayload::validate($payload);
+        Log::info('Resume sources and generation completed.', [
+            'user_resume_id' => $resume->id, 'provider' => 'ollama',
+            'prepare_duration_ms' => round(($prepared - $started) / 1e6),
+            'total_duration_ms' => round((hrtime(true) - $started) / 1e6),
+        ]);
+
+        return $payload;
     }
 }
