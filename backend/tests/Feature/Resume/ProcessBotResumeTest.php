@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
+    config(['resume.generation_driver' => 'python']);
     Storage::fake('local');
     config()->set('services.bot.url', 'https://resume-bot.test');
 });
@@ -447,7 +448,7 @@ it('preserves JSON objects that would otherwise be mistaken for lists', function
         Http::baseUrl('https://resume-bot.test/api/v1'),
         $auth['user'],
         $resume
-    ))::handle();
+    ))->handle();
 
     expect($payload['empty_object'])->toBeInstanceOf(stdClass::class)
         ->and($payload['numeric_object'])->toBeInstanceOf(stdClass::class)

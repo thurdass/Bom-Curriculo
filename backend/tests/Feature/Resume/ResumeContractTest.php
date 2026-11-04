@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
+    config(['resume.generation_driver' => 'python']);
     Storage::fake('local');
     config(['services.bot.url' => 'https://contract-bot.test']);
 });

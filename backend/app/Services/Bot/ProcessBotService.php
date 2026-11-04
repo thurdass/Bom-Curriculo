@@ -6,50 +6,19 @@ use App\Enums\UserResumeEnum;
 use App\Helpers\ResponseData;
 use App\Models\UserResume;
 use App\Services\Bot\Actions\ProcessBotAction;
-use App\Services\Bot\Actions\PublishBotAction;
+use App\Services\Resume\ResumeGenerationService;
 use Exception;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
 class ProcessBotService
 {
-    private string $baseUrl;
-
-    private float $connectTimeout;
-
-    private float $healthTimeout;
-
-    private float $requestTimeout;
-
-    public function __construct(
-        private $http = null,
-        public string $endpointBase = 'api/v1'
-    ) {
-        $config = config('services.bot');
-
-        $this->baseUrl = rtrim($config['url'] ?? '', '/');
-        $this->connectTimeout = (float) ($config['connect_timeout_seconds'] ?? 5);
-        $this->healthTimeout = (float) ($config['health_timeout_seconds'] ?? 5);
-        $this->requestTimeout = (float) ($config['timeout_seconds'] ?? 260);
-    }
-
-    protected function checkHealth($http): void
-    {
-        $response = $http->get('/health');
-
-        if (! $response->successful()) {
-            throw new RequestException($response);
-        }
-
-        if ($response->json('status') !== 'online') {
-            throw new Exception('BOT OFFLINE', 503);
-        }
-    }
+    public function __construct(private ResumeGenerationService $generator) {}
 
     public function analyse(Request $request)
     {
@@ -72,29 +41,17 @@ class ProcessBotService
             ], 404);
         }
 
+        $ttl = (int) max(
+            config('resume.prepare_timeout_seconds') + config('resume.ollama.timeout_seconds'),
+            config('services.bot.health_timeout_seconds') + config('services.bot.timeout_seconds'),
+        ) + 60;
+        $lock = Cache::lock('resume-generation:'.$resume->id, $ttl);
+        if (! $lock->get()) {
+            return ResponseData::error('Processing', ['message' => 'This resume is already being processed.'], 409);
+        }
+
         try {
-            if (empty($this->baseUrl)) {
-                throw new Exception('BOT_URL is not configured.');
-            }
-
-            $this->checkHealth(
-                Http::acceptJson()
-                    ->connectTimeout($this->connectTimeout)
-                    ->timeout($this->healthTimeout)
-                    ->baseUrl($this->baseUrl)
-            );
-
-            $endpointBase = trim($this->endpointBase, '/');
-            $this->http = Http::acceptJson()
-                ->connectTimeout($this->connectTimeout)
-                ->timeout($this->requestTimeout)
-                ->baseUrl($this->baseUrl.'/'.$endpointBase);
-
-            $callback = (new PublishBotAction(
-                $this->http,
-                $request->user(),
-                $resume
-            ))::handle();
+            $callback = $this->generator->generate($resume, $request->user());
 
             $response = ProcessBotAction::handle($callback, $resume);
 
@@ -125,8 +82,7 @@ class ProcessBotService
         } catch (ConnectionException $exception) {
             Log::error('Bot service connection failed.', [
                 'user_resume_id' => $resume->id,
-                'bot_url' => $this->baseUrl,
-                'exception' => $exception,
+                'exception_type' => get_class($exception),
             ]);
 
             $message = 'Bot service is unavailable.';
@@ -147,6 +103,8 @@ class ProcessBotService
             return ResponseData::error('Failed', [
                 'message' => $message,
             ], $statusCode);
+        } finally {
+            $lock->release();
         }
     }
 
