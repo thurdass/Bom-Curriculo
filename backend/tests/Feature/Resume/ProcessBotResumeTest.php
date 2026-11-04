@@ -119,21 +119,21 @@ it('persists and returns only the real successful bot build response', function 
         ->and($resume->fresh()->status)->toBe(UserResumeEnum::ANALYZE)
         ->and($resume->fresh()->observation)->toBeNull();
 
-    foreach (['header', 'experiences', 'projects', 'qualifications', 'skills', 'languages', 'others'] as $field) {
-        expect($analytic->{$field})->toBeNull();
-    }
+    expect($analytic->header['name'])->toBe($botPayload['personal']['name'])
+        ->and($analytic->header['summary'])->toBe($botPayload['professional_summary'])
+        ->and($analytic->skills[0]['name'])->toBe($botPayload['skills'][0]['title']);
 
     $this->withHeaders($auth['headers'])
         ->getJson("/api/client/resumes/pendings/{$analytic->id}")
         ->assertOk()
         ->assertJsonPath('data.ai_payload', $botPayload)
-        ->assertJsonPath('data.header', null);
+        ->assertJsonPath('data.header.name', $botPayload['personal']['name']);
 
     $this->withHeaders($auth['headers'])
         ->getJson('/api/client/resumes/pendings')
         ->assertOk()
         ->assertJsonPath('data.0.ai_payload', $botPayload)
-        ->assertJsonPath('data.0.header', null);
+        ->assertJsonPath('data.0.header.name', $botPayload['personal']['name']);
 
     expect($multipart['resume_cv'])->toBe([
         'contents' => 'REAL_CV_FILE_CONTENT',
@@ -395,7 +395,7 @@ it('preserves the last valid analysis when reprocessing returns an invalid contr
         ->and($resume->fresh()->observation)->toBe('Invalid bot payload at payload.personal: missing required field.');
 });
 
-it('adds an AI payload to a legacy analysis without changing its stored legacy fields', function () {
+it('replaces the review projection when a legacy analysis is regenerated', function () {
     $auth = actingAsUser();
     $resume = createStoredResumeForBot($auth);
     $legacyFields = [
@@ -428,9 +428,9 @@ it('adds an AI payload to a legacy analysis without changing its stored legacy f
 
     expect($updatedAnalytic->ai_payload)->toBe($payload);
 
-    foreach ($legacyFields as $field => $value) {
-        expect($updatedAnalytic->{$field})->toBe($value);
-    }
+    expect($updatedAnalytic->header['name'])->toBe($payload['personal']['name'])
+        ->and($updatedAnalytic->header['summary'])->toBe($payload['professional_summary'])
+        ->and($updatedAnalytic->others)->not->toHaveKey('score');
 });
 
 it('preserves JSON objects that would otherwise be mistaken for lists', function () {

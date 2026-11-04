@@ -347,7 +347,7 @@
 
                     <li>
 
-                        {{ $certification }}
+                        {{ is_string($certification) ? $certification : data_get($certification, 'title', '') }}
 
                     </li>
 

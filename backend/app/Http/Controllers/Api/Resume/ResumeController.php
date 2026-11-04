@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\User\Traits\UserProcessRelationsTrait;
 use App\Http\Controllers\Api\User\Traits\UserUploadsTrait;
 use App\Http\Controllers\Controller;
 use App\Models\ResumeAnalytic;
-use App\Models\UserResume;
 use App\Services\Resume\ResumeDocumentService;
 use Exception;
 use Illuminate\Http\Request;
@@ -235,7 +234,7 @@ class ResumeController extends Controller
 
         try {
 
-            $resume = UserResume::findOrFail($request->input('user_resume_id'));
+            $resume = $request->user()->resumes()->findOrFail($request->input('user_resume_id'));
 
             DB::transaction(function () use (
                 $request,
@@ -243,24 +242,19 @@ class ResumeController extends Controller
                 &$resume
             ) {
 
-                $analytic = ResumeAnalytic::where(
-                    'user_resume_id',
-                    $resume->id
-                )->firstOrFail();
-
-                if ($analytic->user_id !== $request->user()->id) {
-                    abort(403);
-                }
+                $analytic = $request->user()->resumeAnalytics()
+                    ->where('user_resume_id', $resume->id)->firstOrFail();
+                $review = $analytic->toArray();
 
                 $analytic->update([
 
-                    'header' => $request->header,
+                    'header' => array_replace($review['header'] ?? [], $request->input('header')),
                     'experiences' => $request->experiences ?? [],
                     'projects' => $request->projects ?? [],
                     'qualifications' => $request->qualifications ?? [],
                     'skills' => $request->skills ?? [],
                     'languages' => $request->input('languages', []),
-                    'others' => $request->others ?? [],
+                    'others' => array_replace($review['others'] ?? [], $request->input('others', [])),
 
                 ]);
 

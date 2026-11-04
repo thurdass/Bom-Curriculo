@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Resume\ResumeProjection;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -51,5 +52,20 @@ class ResumeAnalytic extends Model
     public function resume(): BelongsTo
     {
         return $this->belongsTo(UserResume::class, 'user_resume_id', 'id');
+    }
+
+    public function toArray(): array
+    {
+        $data = parent::toArray();
+        if (is_array($this->ai_payload) && $this->ai_payload !== []) {
+            foreach (ResumeProjection::fromPayload($this->ai_payload) as $field => $value) {
+                // Reviewed fields, including deliberately empty selections, take precedence.
+                if (($data[$field] ?? null) === null) {
+                    $data[$field] = $value;
+                }
+            }
+        }
+
+        return $data;
     }
 }

@@ -1,0 +1,61 @@
+{
+    "score": 88,
+    "professional_summary": "Desenvolvedora com experiência em APIs PHP.",
+    "header": {
+        "name": "Pessoa de Teste",
+        "headline": "Desenvolvedora",
+        "email": "candidate@example.test",
+        "location": "Salvador",
+        "contacts": null,
+        "emails": "candidate@example.test",
+        "links": {
+            "GitHub": "https://github.com/example"
+        }
+    },
+    "experiences": [
+        {
+            "company": "Example",
+            "role": "Developer",
+            "start": "2020",
+            "end": null,
+            "description": "Desenvolveu APIs.",
+            "is_actual": true,
+            "city": null,
+            "state": null,
+            "country": null
+        }
+    ],
+    "projects": [
+        {
+            "title": "API",
+            "start": null,
+            "end": null,
+            "technologies": "PHP",
+            "description": null,
+            "url": null
+        }
+    ],
+    "qualifications": [
+        {
+            "type": "undergraduate_degree",
+            "institution": "Example University",
+            "title": "Computação",
+            "start": "2018",
+            "end": "2022",
+            "is_coursing": false
+        }
+    ],
+    "skills": [
+        {
+            "name": "PHP",
+            "years": 3
+        }
+    ],
+    "languages": [
+        {
+            "level": "native",
+            "language": "Português"
+        }
+    ],
+    "others": {}
+}

@@ -6,6 +6,8 @@ use App\Enums\UserResumeEnum;
 use App\Models\ResumeAnalytic;
 use App\Models\UserResume;
 use App\Services\Bot\DTO\BotCallbackDto;
+use App\Services\Resume\ResumePayload;
+use App\Services\Resume\ResumeProjection;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -19,7 +21,9 @@ class ProcessBotAction
 
             DB::transaction(function () use ($callback, $resume, &$analytic) {
                 // Valida o callback recebido pelo BOT
-                $payload = BotCallbackDto::fromData($callback)->toArray();
+                $payload = array_key_exists('header', $callback)
+                    ? ResumePayload::validate($callback)
+                    : BotCallbackDto::fromData($callback)->toArray();
 
                 // Atualiza o status da análise do currículo
                 $resume->update([
@@ -32,7 +36,7 @@ class ProcessBotAction
                     [
                         'user_resume_id' => $resume->id,
                     ],
-                    [
+                    array_merge(ResumeProjection::fromPayload($payload), [
                         // Gera um UUID para identificar esta solicitação de análise
                         'analysis_request_id' => (string) Str::uuid(),
 
@@ -41,7 +45,7 @@ class ProcessBotAction
                         'status' => 'success',
                         'error' => '',
                         'ai_payload' => $payload,
-                    ]
+                    ])
                 );
             });
 
