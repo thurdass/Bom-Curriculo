@@ -5,6 +5,7 @@ from quart_schema.openapi import Info, Tag
 from app.controllers.analysis_controller import analysis_blueprint
 from app.controllers.build_controller import build_blueprint
 from app.controllers.health_controller import health_blueprint
+from app.controllers.prepare_controller import prepare_blueprint
 from app.controllers.root_controller import root_blueprint
 from app.core.container import Container
 from app.core.logging import configure_logging
@@ -17,6 +18,7 @@ def create_app() -> Quart:
     container.wire(modules=[
         "app.controllers.analysis_controller",
         "app.controllers.build_controller",
+        "app.controllers.prepare_controller",
     ])
 
     quart_app = Quart(__name__)
@@ -51,6 +53,7 @@ def create_app() -> Quart:
     quart_app.register_blueprint(health_blueprint)
     quart_app.register_blueprint(analysis_blueprint)
     quart_app.register_blueprint(build_blueprint)
+    quart_app.register_blueprint(prepare_blueprint)
     return quart_app
 
 

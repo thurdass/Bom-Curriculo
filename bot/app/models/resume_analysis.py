@@ -123,6 +123,20 @@ class BuiltResumeResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class PreparedResume(BaseModel):
+    """Versioned, extracted sources; never contains a generated resume or upload bytes."""
+
+    version: Literal[1] = 1
+    resume_text: str
+    linkedin_text: str | None = None
+    github_profile: dict[str, Any] | None = None
+    github_url: str | None = None
+    portfolio_url: str | None = None
+    additional_skills: list[SkillItem] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class ResumeAnalysisRequest(BaseModel):
     """HTTP boundary request: the base CV plus optional supporting sources.
 
