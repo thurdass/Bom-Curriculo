@@ -4,6 +4,13 @@ Python service that turns an uploaded resume (PDF/DOCX), plus optional
 LinkedIn/GitHub/portfolio sources, into either an ATS quality score or a
 fully reconstructed, ATS-optimized resume — no job posting involved.
 
+Laravel now calls Ollama directly by default. The bot's role in that flow is
+`POST /api/v1/prepare`: the same multipart input as `/build`, returning versioned
+extracted sources (`version: 1`, `resume_text`, `linkedin_text`, `github_profile`,
+`github_url`, `portfolio_url`, `additional_skills`) without invoking an LLM.
+`/build` and `/analyze` remain available for legacy use. See the
+[phase 1 migration guide](../docs/migracao-llm-laravel.md).
+
 ## Integration guide for the PHP team (start here)
 
 If you're wiring the Laravel backend to this bot, this section is all you
@@ -18,7 +25,7 @@ need — the rest of the file is internal implementation detail.
 > straight from the Pydantic models below, so it never drifts from the actual
 > request/response shapes.
 
-There are two endpoints, sharing the same request shape: `multipart/form-data`
+There are three endpoints, sharing the same request shape: `multipart/form-data`
 with the base CV as a **required** actual PDF/DOCX file upload — **never a
 URL** the bot has to fetch itself, and never plain inline text — plus the
 same optional supporting sources (LinkedIn file, GitHub, portfolio, reported
@@ -278,11 +285,11 @@ use an address that is routable from that container.
 
 For resume build and analysis, Ollama defaults to `reasoning: false` and
 `num_predict: 2048`. LangChain still sends the Pydantic JSON Schema through
-`with_structured_output`; the prompt does not repeat that schema as text. The
+`with_structured_output`. The
 120-second Ollama HTTP setting is an inactivity timeout. The separate
 240-second inference deadline is a wall-clock limit over the complete provider
 chain, including active token generation. The root stack then gives Laravel
-260 seconds and Nginx 280 seconds, leaving each inner layer time to return a
+260 seconds and Nginx 310 seconds, leaving each inner layer time to return a
 structured response before the next layer closes the connection.
 
 For a host-side setup, install/start Ollama and make the configured model

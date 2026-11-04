@@ -6,6 +6,11 @@ https://bomcurriculo.tech
 
 Build ATS-friendly resumes using AI.
 
+Phase 1 now generates resumes directly from Laravel through Ollama (`qwen3:4b`).
+Python remains responsible for document extraction and GitHub enrichment.
+See the [migration report and operating guide](docs/migracao-llm-laravel.md) for
+contracts, configuration, rollback, runtime evidence, and remaining work.
+
 ## About
 
 Bom Currículo is an open-source project that generates professional resumes optimized for Applicant Tracking Systems (ATS).
@@ -92,16 +97,17 @@ docker compose up --build
 The Docker stack includes Ollama and automatically downloads the model defined
 by `OLLAMA_MODEL` (default: `qwen3:4b`) into the persistent `ollama_data`
 volume. The first startup can take several minutes because that model is about
-2.5 GB. The bot reaches Ollama through the Docker network at
-`http://ollama:11434`; it does not use the bot container's `localhost`.
+2.5 GB. Laravel reaches Ollama through the Docker network at
+`http://ollama:11434` and uses the bot only to prepare document sources.
 
 The local default favors CPU-only development. Resume requests disable Qwen's
-thinking mode, cap generated output at 2048 tokens, and stop the complete AI
-provider chain after 240 seconds. Laravel waits up to 260 seconds for the bot,
-while Nginx waits up to 280 seconds, allowing a bot timeout to reach the client
-as a structured response. On a Ryzen 7 5700G, a representative dense resume
-completed with `qwen3:4b` in about 209 seconds; slower CPU-only machines may
-still need a faster external provider or an asynchronous workflow.
+thinking mode, cap generated output at 2048 tokens, and use a 16384-token context.
+Laravel allows 30 seconds for document preparation and 240 seconds for Ollama;
+Nginx waits up to 310 seconds. Generation is synchronous and has no automatic
+provider fallback. Set `RESUME_GENERATION_DRIVER=python` to explicitly restore
+the legacy bot inference path, whose Laravel timeout remains 260 seconds.
+CPU inference can still take tens of seconds or minutes; see the report for
+the measured synthetic test and its limitations.
 
 To confirm that the model is available or download it again:
 
@@ -111,10 +117,9 @@ docker compose exec ollama ollama pull qwen3:4b
 ```
 
 Set `OLLAMA_MODEL` in the root `.env` before starting the stack to use another
-model. `OLLAMA_BASE_URL` may point the bot at an external Ollama deployment
-instead, but its address must be reachable from inside the bot container. For
-better local quality on sufficiently fast hardware, set `OLLAMA_MODEL=qwen3:8b`;
-that model is about 5.2 GB and remains fully supported.
+model. `OLLAMA_BASE_URL` may point Laravel and the legacy bot at another Ollama
+deployment; its address must be reachable from both containers. Model changes
+require explicit configuration and validation on the target hardware.
 
 Services:
 
