@@ -5,11 +5,17 @@ on:
     branches: [development]
     paths:
       - "bot/**"
+      - "backend/tests/Fixtures/generated_resume_payload.json"
+      - ".env.example"
+      - "frontend/nginx.conf"
       - ".github/workflows/bot-ci.yml"
   pull_request:
     branches: [development]
     paths:
       - "bot/**"
+      - "backend/tests/Fixtures/generated_resume_payload.json"
+      - ".env.example"
+      - "frontend/nginx.conf"
       - ".github/workflows/bot-ci.yml"
 
 permissions:

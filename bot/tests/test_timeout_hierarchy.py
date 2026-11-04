@@ -33,3 +33,6 @@ def test_request_timeout_hierarchy_leaves_each_layer_time_to_respond() -> None:
     assert inference_deadline < laravel_timeout < proxy_timeout
     assert laravel_timeout - inference_deadline >= 20
     assert proxy_timeout - laravel_timeout >= 20
+
+    direct_timeout = float(environment["RESUME_PREPARE_TIMEOUT_SECONDS"]) + float(environment["OLLAMA_TIMEOUT_SECONDS"])
+    assert proxy_timeout - direct_timeout >= 20
