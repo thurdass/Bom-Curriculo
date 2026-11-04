@@ -58,3 +58,16 @@ it('generates the ATS PDF when real bot scalar fields are strings or null', func
         Storage::disk('local')->assertExists($path);
     }
 });
+
+it('renders a full legacy payload and generates unique PDF paths', function () {
+    Storage::fake('local');
+    $resume = new ResumeAnalytic;
+    $resume->forceFill([
+        'ai_payload' => json_decode(file_get_contents(base_path('tests/Fixtures/bot_resume_payload.json')), true),
+    ]);
+    $service = app(ResumeDocumentService::class);
+    $first = $service->generate($resume);
+    $second = $service->generate($resume);
+    expect($first)->not->toBe($second);
+    Storage::assertExists([$first, $second]);
+});

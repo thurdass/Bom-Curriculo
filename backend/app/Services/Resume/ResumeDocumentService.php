@@ -57,7 +57,7 @@ class ResumeDocumentService
         $pdf = Pdf::loadView(
             'exports.ats',
             [
-                'resume' => $resume,
+                'resume' => (object) $resume->toArray(),
             ]
         );
 
@@ -84,17 +84,17 @@ class ResumeDocumentService
     ): string {
 
         $name = data_get(
-            $resume->header,
-            'name',
+            $resume->toArray(),
+            'header.name',
             'resume'
         );
 
-        $name = Str::slug($name);
+        $name = Str::slug((string) $name) ?: 'resume';
 
         return sprintf(
             '%s_%s.%s',
             $name,
-            now()->format('YmdHis'),
+            (string) Str::uuid(),
             $extension
         );
 

@@ -10,6 +10,12 @@ class FinishResumeRequest extends CustomRequest
 {
     public function rules(): array
     {
+        $textOrList = function (string $attribute, mixed $value, \Closure $fail): void {
+            if (! is_string($value) && (! is_array($value) || count(array_filter($value, 'is_string')) !== count($value))) {
+                $fail("The {$attribute} field must be text or a list of text values.");
+            }
+        };
+
         return [
             'user_resume_id' => ['required', 'uuid', Rule::exists('resume_analytics', 'user_resume_id')->where('user_id', $this->user()->id)],
             'header' => ['present', 'array'],
@@ -17,6 +23,9 @@ class FinishResumeRequest extends CustomRequest
             'header.headline' => ['nullable', 'string'],
             'header.summary' => ['nullable', 'string'],
             'header.location' => ['nullable', 'string'],
+            'header.email' => ['nullable', 'string'],
+            'header.emails' => ['nullable', $textOrList],
+            'header.contacts' => ['nullable', $textOrList],
             'header.links' => ['array'],
             'header.links.*' => ['string'],
             'experiences' => ['array'],
@@ -27,12 +36,17 @@ class FinishResumeRequest extends CustomRequest
             'experiences.*.start' => ['nullable', 'string'],
             'experiences.*.end' => ['nullable', 'string'],
             'experiences.*.is_actual' => ['nullable', 'boolean'],
+            'experiences.*.city' => ['nullable', 'string'],
+            'experiences.*.state' => ['nullable', 'string'],
+            'experiences.*.country' => ['nullable', 'string'],
             'projects' => ['array'],
             'projects.*' => ['array'],
             'projects.*.title' => ['present', 'nullable', 'string'],
             'projects.*.description' => ['nullable', 'string'],
             'projects.*.start' => ['nullable', 'string'],
             'projects.*.end' => ['nullable', 'string'],
+            'projects.*.url' => ['nullable', 'string'],
+            'projects.*.technologies' => ['nullable', $textOrList],
             'qualifications' => ['array'],
             'qualifications.*' => ['array'],
             'qualifications.*.title' => ['present', 'nullable', 'string'],

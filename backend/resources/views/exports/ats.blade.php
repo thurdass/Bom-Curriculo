@@ -132,42 +132,42 @@
 
         <h2>Experiência Profissional</h2>
 
-        @forelse($resume->experiences as $experience)
+        @forelse(($resume->experiences ?? []) as $experience)
 
             <div class="item">
 
                 <h3>
 
-                    {{ $experience['role'] }}
+                    {{ $experience['role'] ?? '' }}
 
                 </h3>
 
                 <strong>
 
-                    {{ $experience['company'] }}
+                    {{ $experience['company'] ?? '' }}
 
                 </strong>
 
                 <p class="muted">
 
-                    {{ $experience['city'] }},
-                    {{ $experience['state'] }},
-                    {{ $experience['country'] }}
+                    {{ $experience['city'] ?? '' }},
+                    {{ $experience['state'] ?? '' }},
+                    {{ $experience['country'] ?? '' }}
 
                 </p>
 
                 <p class="muted">
 
-                    {{ $experience['start'] }}
+                    {{ $experience['start'] ?? '' }}
                     -
 
-                    {{ $experience['is_actual'] ? 'Current' : $experience['end'] }}
+                    {{ ($experience['is_actual'] ?? false) ? 'Current' : ($experience['end'] ?? '') }}
 
                 </p>
 
                 <p>
 
-                    {{ $experience['description'] }}
+                    {{ $experience['description'] ?? '' }}
 
                 </p>
 
@@ -181,7 +181,7 @@
 
     </div>
 
-    @forelse($resume->projects as $project)
+    @forelse(($resume->projects ?? []) as $project)
 
 
     {{-- PROJECTS --}}
@@ -195,13 +195,13 @@
 
                 <h3>
 
-                    {{ $project['title'] }}
+                    {{ $project['title'] ?? '' }}
 
                 </h3>
 
                 <p>
 
-                    {{ $project['description'] }}
+                    {{ $project['description'] ?? '' }}
 
                 </p>
 
@@ -243,29 +243,29 @@
 
         <h2>Qualificações</h2>
 
-        @forelse($resume->qualifications as $qualification)
+        @forelse(($resume->qualifications ?? []) as $qualification)
 
             <div class="item">
 
                 <h3>
 
-                    {{ $qualification['title'] }}
+                    {{ $qualification['title'] ?? '' }}
 
                 </h3>
 
                 <p>
 
-                    {{ $qualification['institution'] }}
+                    {{ $qualification['institution'] ?? '' }}
 
                 </p>
 
                 <p>
 
-                    {{ $qualification['start'] }}
+                    {{ $qualification['start'] ?? '' }}
 
                     -
 
-                    {{ $qualification['is_coursing'] ? 'Current' : $qualification['end'] }}
+                    {{ ($qualification['is_coursing'] ?? false) ? 'Current' : ($qualification['end'] ?? '') }}
 
                 </p>
 
@@ -287,11 +287,11 @@
 
         <div class="skills">
 
-            @foreach($resume->skills as $skill)
+            @foreach(($resume->skills ?? []) as $skill)
 
                 <span>
 
-                    {{ $skill['name'] }}
+                    {{ $skill['name'] ?? '' }}
 
                     @if(isset($skill['years']))
 
@@ -315,15 +315,15 @@
 
         <ul>
 
-            @foreach($resume->languages as $language)
+            @foreach(($resume->languages ?? []) as $language)
 
                 <li>
 
-                    {{ $language['language'] }}
+                    {{ $language['language'] ?? '' }}
 
                     -
 
-                    {{ ucfirst($language['level']) }}
+                    {{ ucfirst($language['level'] ?? '') }}
 
                 </li>
 
@@ -335,7 +335,7 @@
 
     {{-- CERTIFICATIONS --}}
 
-    @if(!empty($resume->others['certifications']))
+    @if(is_array($resume->others['certifications'] ?? null))
 
         <div class="section">
 
@@ -347,7 +347,8 @@
 
                     <li>
 
-                        {{ is_string($certification) ? $certification : data_get($certification, 'title', '') }}
+                        @php($title = is_string($certification) ? $certification : data_get($certification, 'title', ''))
+                        {{ is_string($title) ? $title : '' }}
 
                     </li>
 
