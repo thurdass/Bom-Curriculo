@@ -16,7 +16,7 @@ trait UserUploadsTrait
             SystemUploadPrivatePathEnum::PATH_UPLOAD_RESUME_CV->value
         );
 
-        if (! empty($user->resume_cv)) {
+        if (! empty($user->resume_cv) && ! $user->resumes()->where('original_file_path_cv', $user->resume_cv)->exists()) {
             Storage::delete($user->resume_cv);
         }
 
@@ -29,7 +29,7 @@ trait UserUploadsTrait
             SystemUploadPrivatePathEnum::PATH_UPLOAD_RESUME_LINKEDIN->value
         );
 
-        if (! empty($user->resume_linkedin)) {
+        if (! empty($user->resume_linkedin) && ! $user->resumes()->where('original_file_path_linkedin', $user->resume_linkedin)->exists()) {
             Storage::delete($user->resume_linkedin);
         }
 

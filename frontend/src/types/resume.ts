@@ -50,7 +50,7 @@ export interface AnalyticProject {
 }
 
 export interface AnalyticQualification {
-  type: string;
+  type: string | null;
   institution: string;
   title: string;
   start?: string | null;

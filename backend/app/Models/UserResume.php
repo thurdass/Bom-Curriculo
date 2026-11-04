@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Storage;
     'status',
     'processed_at',
     'observation',
+    'source_context',
 ])]
 class UserResume extends Model
 {
@@ -32,6 +33,8 @@ class UserResume extends Model
         'download_url',
     ];
 
+    protected $hidden = ['source_context'];
+
     /**
      * Get the attributes that should be cast.
      *
@@ -42,6 +45,7 @@ class UserResume extends Model
         return [
             'status' => UserResumeEnum::class,
             'processed_at' => 'datetime',
+            'source_context' => 'array',
         ];
     }
 

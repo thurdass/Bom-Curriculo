@@ -68,8 +68,8 @@ describe("NewResume", () => {
 
   it("shows the real processing error instead of reporting success", async () => {
     const user = userEvent.setup();
-    createResumeMock.mockResolvedValue(undefined);
-    listUserResumesMock.mockResolvedValue([{ id: "resume-real-error" }]);
+    createResumeMock.mockResolvedValue({ user_resume_id: "resume-real-error" });
+    listUserResumesMock.mockResolvedValue([{ id: "another-concurrent-upload" }]);
     analyseResumeMock.mockRejectedValue(new Error("Bot indisponível"));
     const { container } = renderPage();
     const resumeInput = container.querySelector<HTMLInputElement>("#resume_pdf");
@@ -85,5 +85,17 @@ describe("NewResume", () => {
     });
 
     expect(toastSuccessMock).not.toHaveBeenCalled();
+    expect(listUserResumesMock).not.toHaveBeenCalled();
+  });
+
+  it("does not guess an upload ID when the upload response is incomplete", async () => {
+    createResumeMock.mockResolvedValue({ message: "Uploaded" });
+    const user = userEvent.setup();
+    const { container } = renderPage();
+    await user.upload(container.querySelector<HTMLInputElement>("#resume_pdf")!, new File(["resume"], "resume.pdf", { type: "application/pdf" }));
+    await user.click(screen.getByRole("button", { name: "Gerar Currículo com IA" }));
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith("Não foi possível localizar o currículo enviado."));
+    expect(analyseResumeMock).not.toHaveBeenCalled();
+    expect(listUserResumesMock).not.toHaveBeenCalled();
   });
 });

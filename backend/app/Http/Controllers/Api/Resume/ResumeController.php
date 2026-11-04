@@ -59,7 +59,7 @@ class ResumeController extends Controller
 
         try {
 
-            DB::transaction(function () use ($request) {
+            $resume = DB::transaction(function () use ($request) {
                 $user = $request->user();
 
                 $resumeCV = $request->file('resume_cv');
@@ -67,7 +67,7 @@ class ResumeController extends Controller
 
                 $pathResumeCv = null;
                 $pathResumeLinkedin = null;
-                $skills = $request->input('skills', []);
+                $skills = $request->validated('skills', []);
 
                 if (! empty($resumeCV)) {
                     $pathResumeCv = $this->storeCvResume($request, $user);
@@ -78,23 +78,29 @@ class ResumeController extends Controller
                 }
 
                 $user->update([
-                    'resume_cv' => $pathResumeCv ?? $user->resumeCV,
+                    'resume_cv' => $pathResumeCv ?? $user->resume_cv,
                     'resume_linkedin' => $pathResumeLinkedin ?? $user->resume_linkedin,
                     'github_link' => $request->input('github_link', $user->github_link),
                     'site_link' => $request->input('site_link', $user->site_link),
                 ]);
 
-                if (! empty($pathResumeCv) || ! empty($pathResumeLinkedin)) {
-                    $user->resumes()->create([
-                        'original_file_path_cv' => $pathResumeCv,
-                        'original_file_path_linkedin' => $pathResumeLinkedin,
-                    ]);
-                }
                 $this->processSkillsUser($skills, $user);
 
+                return $user->resumes()->create([
+                    'original_file_path_cv' => $pathResumeCv,
+                    'original_file_path_linkedin' => $pathResumeLinkedin,
+                    'source_context' => [
+                        'github_url' => $user->github_link,
+                        'portfolio_url' => $user->site_link,
+                        'additional_skills' => $user->skills()->get(['name', 'years'])->toArray(),
+                    ],
+                ]);
             });
 
-            return ResponseData::success('User Updated', ['message' => 'User and upload has been updated.'], 200);
+            return ResponseData::success('User Updated', [
+                'message' => 'User and upload has been updated.',
+                'user_resume_id' => $resume->id,
+            ], 200);
 
         } catch (ValidationException $exception) {
             return ResponseData::error('Validation error', ['errors' => $exception->errors()], 422);

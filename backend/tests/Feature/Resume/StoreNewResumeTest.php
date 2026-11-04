@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\UserResume;
+use App\Services\Bot\Actions\PublishBotAction;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 it('uploads cv and linkedin files and creates a resume record', function () {
@@ -112,3 +115,40 @@ it('requires authentication', function () {
     $this->postJson('/api/client/resumes/new-resume')
         ->assertUnauthorized();
 });
+
+it('returns the exact upload UUID and snapshots sources independently of later profile edits', function () {
+    Storage::fake('local');
+    $auth = actingAsUser();
+    $first = $this->withHeaders($auth['headers'])->postJson('/api/client/resumes/new-resume', [
+        'resume_cv' => UploadedFile::fake()->create('first.pdf', 100),
+        'github_link' => 'https://github.com/first',
+        'skills' => [['name' => 'PHP', 'years' => 3]],
+    ])->assertOk()->json('data.user_resume_id');
+    $second = $this->withHeaders($auth['headers'])->postJson('/api/client/resumes/new-resume', [
+        'resume_cv' => UploadedFile::fake()->create('second.pdf', 100),
+        'github_link' => 'https://github.com/second',
+        'skills' => [['name' => 'Rust', 'years' => 1]],
+    ])->assertOk()->json('data.user_resume_id');
+    expect($first)->toBeString()->not->toBe($second);
+    $resume = UserResume::findOrFail($first);
+    expect($resume->source_context['additional_skills'])->toBe([['name' => 'PHP', 'years' => 3]])
+        ->and($resume->toArray())->not->toHaveKey('source_context');
+    Http::fake(function ($request) {
+        $form = collect($request->data())->keyBy('name');
+        expect($form['github_url']['contents'])->toBe('https://github.com/first')
+            ->and(json_decode($form['additional_skills']['contents'], true))->toBe([['name' => 'PHP', 'years' => 3]]);
+
+        return Http::response('{"ok":true}');
+    });
+    (new PublishBotAction(Http::baseUrl('http://prepare.test/api/v1'), $auth['user']->fresh(), $resume, '/prepare'))->handle();
+    Http::assertSentCount(1);
+});
+
+it('rejects fractional or negative skill years at upload', function ($years) {
+    Storage::fake('local');
+    $auth = actingAsUser();
+    $this->withHeaders($auth['headers'])->postJson('/api/client/resumes/new-resume', [
+        'resume_cv' => UploadedFile::fake()->create('cv.pdf', 100),
+        'skills' => [['name' => 'PHP', 'years' => $years]],
+    ])->assertUnprocessable();
+})->with([1.5, -1]);

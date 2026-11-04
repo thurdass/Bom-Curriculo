@@ -3,7 +3,7 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { createResume, analyseResume, listUserResumes } from "@/api/resume";
+import { createResume, analyseResume } from "@/api/resume";
 import type { CreateResumeSkill } from "@/api/resume";
 import { getApiErrorMessage } from "@/api/client";
 import {
@@ -34,7 +34,7 @@ export default function NewResume() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      await createResume({
+      const uploaded = await createResume({
         resume_cv: resumePdf,
         resume_linkedin: linkedinPdf,
         github_link: githubUrl,
@@ -42,15 +42,13 @@ export default function NewResume() {
         skills,
       });
 
-      const resumes = await listUserResumes();
-      const newest = resumes[0];
-      if (!newest) {
+      if (!uploaded?.user_resume_id) {
         throw new Error('Não foi possível localizar o currículo enviado.');
       }
 
-      await analyseResume(newest.id);
+      await analyseResume(uploaded.user_resume_id);
 
-      return newest.id;
+      return uploaded.user_resume_id;
     },
     onSuccess: (resumeId) => {
       queryClient.invalidateQueries({ queryKey: ["user", "resumes"] });

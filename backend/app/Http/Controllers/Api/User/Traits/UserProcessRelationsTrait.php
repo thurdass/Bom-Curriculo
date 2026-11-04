@@ -8,7 +8,7 @@ trait UserProcessRelationsTrait
 {
     public function processSkillsUser(array $skills, User $user): void
     {
-        if (! empty($skills) && count($skills) > 0 ** is_array($skills)) {
+        if (! empty($skills)) {
             $user->skills()->delete();
             $user->skills()->createMany((array) $skills);
         }

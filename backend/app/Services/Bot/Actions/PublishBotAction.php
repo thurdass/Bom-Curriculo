@@ -84,19 +84,25 @@ class PublishBotAction
                 );
             }
 
+            // Old uploads have no snapshot; keep their original profile-based behavior.
+            $sources = $resume->source_context ?? [
+                'additional_skills' => $user->skills()->get(['name', 'years'])->toArray(),
+                'github_url' => $user->github_link,
+                'portfolio_url' => $user->site_link,
+            ];
             $form = [
                 'additional_skills' => json_encode(
-                    $user->skills()->select('name', 'years')->get()->toArray(),
+                    $sources['additional_skills'],
                     JSON_THROW_ON_ERROR
                 ),
             ];
 
-            if (! empty($user->github_link)) {
-                $form['github_url'] = $user->github_link;
+            if (! empty($sources['github_url'])) {
+                $form['github_url'] = $sources['github_url'];
             }
 
-            if (! empty($user->site_link)) {
-                $form['portfolio_url'] = $user->site_link;
+            if (! empty($sources['portfolio_url'])) {
+                $form['portfolio_url'] = $sources['portfolio_url'];
             }
 
             return $request->post($this->endpoint, $form);

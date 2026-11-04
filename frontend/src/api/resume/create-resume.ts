@@ -15,6 +15,7 @@ export interface SendResumeInput {
 
 export interface SendResumeResponse {
   message: string;
+  user_resume_id: string;
 }
 
 export async function createResume(
@@ -36,10 +37,10 @@ export async function createResume(
     }
   });
 
-  const { data } = await httpClient.post<SendResumeResponse>(
+  const { data } = await httpClient.post<{ data: SendResumeResponse }>(
     "/client/resumes/new-resume",
     formData,
   );
 
-  return data;
+  return data.data;
 }

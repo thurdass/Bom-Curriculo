@@ -15,6 +15,7 @@ class NewResumeRequest extends CustomRequest
             'site_link' => ['nullable', 'string', 'min:9', 'max:255'],
             'skills' => ['nullable', 'array'],
             'skills.*.name' => ['required', 'string'],
+            'skills.*.years' => ['nullable', 'integer', 'min:0', 'max:80'],
         ];
     }
 }
