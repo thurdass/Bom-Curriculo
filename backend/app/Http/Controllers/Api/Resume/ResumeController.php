@@ -235,6 +235,20 @@ class ResumeController extends Controller
         );
     }
 
+    public function download(Request $request, string $resume)
+    {
+        $record = $request->user()->resumes()->findOrFail($resume);
+        $path = $record->processed_file_path;
+        $disk = Storage::disk('local');
+
+        abort_unless(is_string($path) && $path !== '' && $disk->exists($path), 404, 'O PDF deste currículo ainda não está disponível.');
+
+        return $disk->download($path, 'curriculo.pdf', [
+            'Content-Type' => 'application/pdf',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
     public function finish(FinishResumeRequest $request, ResumeDocumentService $documentService)
     {
 

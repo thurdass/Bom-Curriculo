@@ -6,6 +6,8 @@ import ResumeListSkeleton from "@/components/Home/ResumeListSkeleton";
 import ResumeList from "@/components/Home/ResumeList";
 import { useUserResumes } from "@/hooks/use-user-resumes";
 import { ROUTE_LINKS } from "@/constants/RouteLinks";
+import { downloadResume } from "@/api/resume";
+import { toast } from "sonner";
 
 const RESUME_LIMIT = 5;
 
@@ -31,11 +33,21 @@ export default function MyResumes() {
             <ResumeList
               resumes={resumes}
               limit={RESUME_LIMIT}
-              onDownloadResume={(id) => {
+              onDownloadResume={async (id) => {
                 const resume = resumes.find((item) => item.id === id);
-                const url = resume?.downloadUrl;
-                if (url) {
-                  window.open(url, "_blank");
+                if (resume?.status === "analyze") {
+                  toast.info("Confirme os dados do currículo para gerar o PDF.");
+                  navigate(ROUTE_LINKS.resumeConfirmId(id));
+                  return;
+                }
+                if (resume?.status !== "ready") {
+                  toast.info("O PDF deste currículo ainda não está disponível.");
+                  return;
+                }
+                try {
+                  await downloadResume(id);
+                } catch {
+                  toast.error("Não foi possível baixar o PDF. Atualize a página e tente novamente.");
                 }
               }}
               onReviewResume={(id) => navigate(ROUTE_LINKS.resumeConfirmId(id))}

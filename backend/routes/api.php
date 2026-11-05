@@ -58,6 +58,7 @@ Route::group([
         Route::get('/pendings/{resume}', [ResumeController::class, 'showPendingResume']);
 
         Route::post('{resume}/finish', [ResumeController::class, 'finish']);
+        Route::get('{resume}/download', [ResumeController::class, 'download'])->whereUuid('resume');
 
     });
 

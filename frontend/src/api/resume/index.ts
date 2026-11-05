@@ -5,6 +5,7 @@ export { listResumeAnalytics } from "./list-resume-analytics";
 export { getResumeFile } from "./get-resume-file";
 export { getResumeAnalytic } from "./get-resume-analytic";
 export { finishResume } from "./finish-resume";
+export { downloadResume } from "./download-resume";
 
 export type {
   CreateResumeSkill,
