@@ -1,143 +1,63 @@
-# ATS Resume Builder 🚀
+# Bom Currículo — Laravel backend
 
-ATS Resume Builder is an open-source backend system built with **Laravel 13** that generates and manages professional resumes optimized for Applicant Tracking Systems (ATS).
+Laravel 13 manages authentication, uploads, resume processing, review and PDF
+downloads. PDF extraction uses Poppler; DOCX parsing uses PHP DOM and ZIP.
+Public GitHub enrichment and Ollama generation run directly in Laravel.
+Resume processing is synchronous and requires no Python service or queue worker.
 
-The system supports authentication, resume management, file uploads, structured user profiles, and asynchronous processing using RabbitMQ.
+See the [architecture and operating guide](../docs/migracao-llm-laravel.md) for
+configuration, API contracts, compatibility, timeouts, logs and isolated tests.
 
----
+## Docker development
 
-## 📌 Repository
-
-👉 GitHub: https://github.com/Bom-Curriculo/ats
-
----
-
-## 📬 API Documentation (Postman)
-
-👉 Postman Collection: https://documenter.getpostman.com/view/10306778/2sBY4HSibu#6f5a8d4d-17fc-480f-acb6-427998c905e5
-
-The Postman collection includes all API endpoints:
-
-- Authentication flows
-- User profile management
-- Resume upload & validation
-- File retrieval (secure storage access)
-- RabbitMQ processing endpoints
-
----
-
-## ⚙️ Tech Stack
-
-- PHP 8.4+
-- Laravel 13
-- Laravel Sanctum (API Authentication)
-- MySQL / PostgreSQL
-- Redis
-- RabbitMQ (asynchronous processing)
-- PHPUnit + Pest (testing)
-- Local / S3-compatible storage
-
-## 📬 Packages
-
-- Horizon (Queue Managemenmt)
--- {{APP_URL}}/horizon
-
----
-
-## 📌 Requirements
-
-Before running the project, ensure your environment has:
-
-- PHP 8.4+
-- Composer 2+
-- MySQL 8+ or PostgreSQL 14+
-- Node.js (optional)
-- RabbitMQ server (required, for async processing)
-- Redis
-- Docker (recommended)
-
----
-
-## 🧠 Compatibility Notes
-
-This project uses modern PHP and Laravel features:
-
-- PHP 8.4 typed properties
-- Enums for domain modeling
-- Strict typing
-- Laravel 13 architecture patterns
-- Service-based business logic
-- Queue-driven async processing
-
----
-
-## 🚀 Features
-
-### 🔐 Authentication
-- User registration
-- Login with Sanctum token
-- OTP password recovery
-- Secure logout
-
----
-
-
-### ⚡ Async Processing (RabbitMQ)
-- Resume processing queue
-- Job-based architecture
-- Decoupled service layer
-- Future-ready for microservices integration
-
----
-
-## 📦 Installation
-
-### 1. Clone repository
+From the repository root, create the environment files using the examples and run:
 
 ```bash
-git clone https://github.com/Bom-Curriculo/ats.git
-cd ats
+docker compose up -d --build
 ```
 
-### 2. Clone repository
+The backend is available at `http://localhost:9000`; its health endpoint is `/up`.
+The frontend is available at `http://localhost:5173`. The entrypoint applies
+migrations and development seeds; PostgreSQL, uploaded files and Ollama models
+use persistent volumes. Preserve existing `.env` files and volumes when updating.
+
+## Running outside Docker
+
+Install PHP 8.4 with the extensions required by Composer, Composer 2, Node.js,
+PostgreSQL and Poppler (`poppler-utils` on Debian/Ubuntu). Ollama must be reachable
+and the configured model, initially `qwen3:4b`, must be installed.
+
+From this directory:
 
 ```bash
 composer install
-```
-### 3. Environment setup
-
-```bash
 cp .env.example .env
 php artisan key:generate
+npm ci
+npm run build
 ```
 
-#### 3.1. SETUP .ENV
-
-```bash
-configure .env file
-```
-
-### 4. Run Migrations And Seeds
+Configure database access, `OLLAMA_BASE_URL` and, optionally, `GITHUB_TOKEN` in
+`.env`. Set `DB_HOST=127.0.0.1` and the published database port when connecting
+from the host to Docker PostgreSQL. Adjust `PDFTOTEXT_BINARY` if necessary.
+Then initialize the development database and start the API:
 
 ```bash
 php artisan migrate --seed
+php artisan serve --host=127.0.0.1 --port=9000
 ```
 
-### 5. Start the server
+## Tests
+
+Use the disposable-container commands in the operating guide for SQLite tests
+without accessing application data. The default suite uses simulated external
+HTTP responses; the real Ollama integration is explicitly opt-in.
 
 ```bash
-php artisan serve
+vendor/bin/pint --test
 ```
 
-### 6. Run RabbitMQ Consumer
-
-```bash
-php artisan app:rabbit-consume
-```
-
-
-### 6. Run Queue Horizon Worker
-
-```bash
-php artisan horizon
-```
+Routes and their authentication requirements are defined in `routes/api.php`.
+The generation endpoint is `POST /api/client/services/resumes/process`, receiving
+`user_resume_id` from the upload response. The former `/services/bot/process`
+path remains an alias to preserve frontend compatibility.

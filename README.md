@@ -6,10 +6,10 @@ https://bomcurriculo.tech
 
 Build ATS-friendly resumes using AI.
 
-Phase 1 now generates resumes directly from Laravel through Ollama (`qwen3:4b`).
-Python remains responsible for document extraction and GitHub enrichment.
+Laravel extracts PDF/DOCX files, enriches public GitHub profiles, validates data,
+and generates resumes directly through Ollama (`qwen3:4b`). No Python service is required.
 See the [migration report and operating guide](docs/migracao-llm-laravel.md) for
-contracts, configuration, rollback, runtime evidence, and remaining work.
+contracts, configuration, tests, and remaining work.
 
 ## About
 
@@ -55,13 +55,13 @@ The screen is still evolving, but it already represents the first visual proposa
 
 ## Roadmap
 
-- [ ] Resume generation
-- [ ] LinkedIn PDF parser
-- [ ] GitHub integration
+- [x] Resume generation
+- [x] LinkedIn PDF parser
+- [x] GitHub integration
 - [ ] Portfolio analysis
 - [ ] Job matching
 - [ ] Multiple templates
-- [ ] Export to PDF
+- [x] Export to PDF
 - [ ] Export to DOCX
 
 ## Contributing
@@ -78,7 +78,6 @@ Create the environment files:
 cp .env.example .env
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-cp bot/.env.example bot/.env
 ```
 
 On Windows PowerShell:
@@ -87,7 +86,6 @@ On Windows PowerShell:
 Copy-Item .env.example .env
 Copy-Item backend/.env.example backend/.env
 Copy-Item frontend/.env.example frontend/.env
-Copy-Item bot/.env.example bot/.env
 ```
 
 ```bash
@@ -98,14 +96,14 @@ The Docker stack includes Ollama and automatically downloads the model defined
 by `OLLAMA_MODEL` (default: `qwen3:4b`) into the persistent `ollama_data`
 volume. The first startup can take several minutes because that model is about
 2.5 GB. Laravel reaches Ollama through the Docker network at
-`http://ollama:11434` and uses the bot only to prepare document sources.
+`http://ollama:11434`. PDF extraction uses Poppler, installed in the backend image;
+DOCX parsing and GitHub enrichment run directly in Laravel.
 
 The local default favors CPU-only development. Resume requests disable Qwen's
 thinking mode, cap generated output at 2048 tokens, and use a 16384-token context.
-Laravel allows 30 seconds for document preparation and 240 seconds for Ollama;
-Nginx waits up to 310 seconds. Generation is synchronous and has no automatic
-provider fallback. Set `RESUME_GENERATION_DRIVER=python` to explicitly restore
-the legacy bot inference path, whose Laravel timeout remains 260 seconds.
+Laravel allows 10 seconds per PDF extraction, 10 seconds per GitHub request
+(up to two), and 240 seconds for Ollama. Nginx waits up to 310 seconds.
+Generation is synchronous and has no automatic provider fallback.
 CPU inference can still take tens of seconds or minutes; see the report for
 the measured synthetic test and its limitations.
 
@@ -117,21 +115,19 @@ docker compose exec ollama ollama pull qwen3:4b
 ```
 
 Set `OLLAMA_MODEL` in the root `.env` before starting the stack to use another
-model. `OLLAMA_BASE_URL` may point Laravel and the legacy bot at another Ollama
-deployment; its address must be reachable from both containers. Model changes
+model. `OLLAMA_BASE_URL` may point Laravel at another Ollama
+deployment; its address must be reachable from the backend. Model changes
 require explicit configuration and validation on the target hardware.
 
 Services:
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:9000
-- Bot: http://localhost:8000
 - Ollama: http://localhost:11434
 
 Health endpoints:
 
 - Backend: http://localhost:9000/up
-- Bot: http://localhost:8000/health
 
 ## License
 
