@@ -57,7 +57,7 @@ class ResumeDocumentService
         $pdf = Pdf::loadView(
             'exports.ats',
             [
-                'resume' => (object) $resume->toArray(),
+                'document' => app(ResumeDocumentPresenter::class)->present($resume->toArray()),
             ]
         );
 

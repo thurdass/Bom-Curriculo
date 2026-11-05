@@ -1,364 +1,70 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-
+<html lang="{{ $document['lang'] }}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ $resume->header['name'] ?? 'Currículo' }}</title>
-
+    <title>{{ $document['name'] ?: 'Currículo' }}</title>
     <style>
-
-        body{
-            font-family: Arial, Helvetica, sans-serif;
-            font-size:12px;
-            color:#222;
-            margin:40px;
-            line-height:1.4;
-        }
-
-        h1{
-            margin:0;
-            font-size:26px;
-        }
-
-        h2{
-            font-size:18px;
-            margin-top:30px;
-            margin-bottom:10px;
-            border-bottom:1px solid #DDD;
-            padding-bottom:4px;
-        }
-
-        h3{
-            margin:10px 0 2px;
-            font-size:14px;
-        }
-
-        p{
-            margin:4px 0;
-        }
-
-        .muted{
-            color:#666;
-        }
-
-        .section{
-            margin-top:25px;
-        }
-
-        .item{
-            margin-bottom:18px;
-        }
-
-        ul{
-            padding-left:18px;
-            margin-top:5px;
-        }
-
-        .skills span{
-            display:inline-block;
-            border:1px solid #AAA;
-            padding:4px 8px;
-            margin:3px;
-            border-radius:4px;
-            font-size:11px;
-        }
-
-        .contacts p{
-            margin:2px 0;
-        }
-
-        hr{
-            border:none;
-            border-top:1px solid #DDD;
-            margin:15px 0;
-        }
-
+        @page { margin: 14mm 16mm; }
+        body { margin: 0; font-family: 'DejaVu Sans', sans-serif; font-size: 10pt; line-height: 1.2; color: #202020; }
+        h1 { margin: 0 0 3pt; font-size: 19pt; line-height: 1.15; }
+        h2 { margin: 9pt 0 3pt; padding-bottom: 3pt; border-bottom: 0.5pt solid #aaa; font-size: 11pt; page-break-after: avoid; }
+        h3 { margin: 0 0 2pt; font-size: 10pt; }
+        p { margin: 0 0 2pt; orphans: 3; widows: 3; }
+        .header { page-break-inside: avoid; }
+        .headline { font-size: 10.5pt; margin-bottom: 4pt; }
+        .contacts, .links, .meta, .details { font-size: 9pt; }
+        .meta { color: #444; }
+        .entry { margin-bottom: 5pt; }
+        .entry.compact { page-break-inside: avoid; }
+        .entry-heading { page-break-inside: avoid; page-break-after: avoid; }
+        .description { white-space: pre-line; }
+        .text, .links { overflow-wrap: break-word; word-wrap: break-word; }
     </style>
-
 </head>
-
 <body>
-
-    {{-- HEADER --}}
-
-    <h1>{{ $resume->header['name'] ?? '' }}</h1>
-
-    <p>
-        {{ $resume->header['headline'] ?? '' }}
-    </p>
-
-    <div class="contacts">
-
-        <p>{{ $resume->header['location'] ?? '' }}</p>
-
-
-        @php
-            $emails = $resume->header['emails'] ?? null;
-            $contacts = $resume->header['contacts'] ?? null;
-        @endphp
-
-        <p>{{ is_array($emails) ? implode(' / ', $emails) : ($emails ?? '') }}</p>
-        <p>{{ is_array($contacts) ? implode(' / ', $contacts) : ($contacts ?? '') }}</p>
-
-        @if(isset($resume->header['links']))
-
-            @foreach($resume->header['links'] as $label => $link)
-
-                <p>{{ ucfirst($label) }}: {{ $link }}</p>
-
-            @endforeach
-
-        @endif
-
+    <div class="header text">
+        @if($document['name'] !== '')<h1>{{ $document['name'] }}</h1>@endif
+        @if($document['headline'] !== '')<p class="headline">{{ $document['headline'] }}</p>@endif
+        @if($document['contacts'] !== [])<p class="contacts">{{ implode(' · ', $document['contacts']) }}</p>@endif
+        @foreach($document['links'] as $link)
+            <p class="links">{{ $link['label'] !== '' ? $link['label'].': ' : '' }}{{ $link['url'] }}</p>
+        @endforeach
     </div>
 
-    {{-- SUMMARY --}}
-
-    <div class="section">
-
-        <h2>Resumo Profissional</h2>
-
-        <p>
-
-            {{ $resume->header['summary'] ?? '' }}
-
-        </p>
-
-    </div>
-
-    {{-- EXPERIENCES --}}
-
-    <div class="section">
-
-        <h2>Experiência Profissional</h2>
-
-        @forelse(($resume->experiences ?? []) as $experience)
-
-            <div class="item">
-
-                <h3>
-
-                    {{ $experience['role'] ?? '' }}
-
-                </h3>
-
-                <strong>
-
-                    {{ $experience['company'] ?? '' }}
-
-                </strong>
-
-                <p class="muted">
-
-                    {{ $experience['city'] ?? '' }},
-                    {{ $experience['state'] ?? '' }},
-                    {{ $experience['country'] ?? '' }}
-
-                </p>
-
-                <p class="muted">
-
-                    {{ $experience['start'] ?? '' }}
-                    -
-
-                    {{ ($experience['is_actual'] ?? false) ? 'Current' : ($experience['end'] ?? '') }}
-
-                </p>
-
-                <p>
-
-                    {{ $experience['description'] ?? '' }}
-
-                </p>
-
-            </div>
-
-        @empty
-
-            <p>Sem experiência.</p>
-
-        @endforelse
-
-    </div>
-
-    @forelse(($resume->projects ?? []) as $project)
-
-
-    {{-- PROJECTS --}}
-
-    <div class="section">
-
-        <h2>Projetos</h2>
-
-        
-            <div class="item">
-
-                <h3>
-
-                    {{ $project['title'] ?? '' }}
-
-                </h3>
-
-                <p>
-
-                    {{ $project['description'] ?? '' }}
-
-                </p>
-
-                @if(!empty($project['url']))
-
-                    <p>
-
-                        {{ $project['url'] }}
-
-                    </p>
-
-                @endif
-
-                @if(!empty($project['technologies']))
-
-                    <p>
-
-                        <strong>Técnologias:</strong>
-
-                        {{ is_array($project['technologies']) ? implode(', ', $project['technologies']) : $project['technologies'] }}
-
-                    </p>
-
-                @endif
-
-            </div>
-
-        
-
-    </div>
-
-    @empty
-
-    @endforelse
-
-    {{-- EDUCATION --}}
-
-    <div class="section">
-
-        <h2>Qualificações</h2>
-
-        @forelse(($resume->qualifications ?? []) as $qualification)
-
-            <div class="item">
-
-                <h3>
-
-                    {{ $qualification['title'] ?? '' }}
-
-                </h3>
-
-                <p>
-
-                    {{ $qualification['institution'] ?? '' }}
-
-                </p>
-
-                <p>
-
-                    {{ $qualification['start'] ?? '' }}
-
-                    -
-
-                    {{ ($qualification['is_coursing'] ?? false) ? 'Current' : ($qualification['end'] ?? '') }}
-
-                </p>
-
-            </div>
-
-        @empty
-
-            <p>Sem qualificações.</p>
-
-        @endforelse
-
-    </div>
-
-    {{-- SKILLS --}}
-
-    <div class="section">
-
-        <h2>Habilidades</h2>
-
-        <div class="skills">
-
-            @foreach(($resume->skills ?? []) as $skill)
-
-                <span>
-
-                    {{ $skill['name'] ?? '' }}
-
-                    @if(isset($skill['years']))
-
-                        ({{ $skill['years'] }} years)
-
-                    @endif
-
-                </span>
-
-            @endforeach
-
-        </div>
-
-    </div>
-
-    {{-- LANGUAGES --}}
-
-    <div class="section">
-
-        <h2>Idiomas</h2>
-
-        <ul>
-
-            @foreach(($resume->languages ?? []) as $language)
-
-                <li>
-
-                    {{ $language['language'] ?? '' }}
-
-                    -
-
-                    {{ ucfirst($language['level'] ?? '') }}
-
-                </li>
-
-            @endforeach
-
-        </ul>
-
-    </div>
-
-    {{-- CERTIFICATIONS --}}
-
-    @if(is_array($resume->others['certifications'] ?? null))
-
-        <div class="section">
-
-            <h2>Certificações</h2>
-
-            <ul>
-
-                @foreach($resume->others['certifications'] as $certification)
-
-                    <li>
-
-                        @php($title = is_string($certification) ? $certification : data_get($certification, 'title', ''))
-                        {{ is_string($title) ? $title : '' }}
-
-                    </li>
-
-                @endforeach
-
-            </ul>
-
-        </div>
-
+    @if($document['summary'] !== '')
+        <h2>{{ $document['labels']['summary'] }}</h2>
+        <p class="description text">{{ $document['summary'] }}</p>
     @endif
-</body>
 
+    @foreach($document['sections'] as $section)
+        <h2>{{ $section['title'] }}</h2>
+        @foreach($section['items'] as $item)
+            {{-- Keep short entries together; longer descriptions must remain free to span pages. --}}
+            <div class="entry text {{ mb_strlen(implode(' ', $item)) < 450 && substr_count($item['description'], "\n") < 5 ? 'compact' : '' }}">
+                @if($item['title'] !== '' || $item['subtitle'] !== '' || $item['meta'] !== '')
+                    <div class="entry-heading">
+                        @if($item['title'] !== '')<h3>{{ $item['title'] }}</h3>@endif
+                        @if($item['subtitle'] !== '')<p>{{ $item['subtitle'] }}</p>@endif
+                        @if($item['meta'] !== '')<p class="meta">{{ $item['meta'] }}</p>@endif
+                    </div>
+                @endif
+                @if($item['description'] !== '')<p class="description">{{ $item['description'] }}</p>@endif
+                @if($item['url'] !== '' || $item['technologies'] !== '')
+                    <p class="details">
+                        {{ $item['url'] }}
+                        @if($item['url'] !== '' && $item['technologies'] !== '') · @endif
+                        @if($item['technologies'] !== ''){{ $document['labels']['technologies'] }}: {{ $item['technologies'] }}@endif
+                    </p>
+                @endif
+            </div>
+        @endforeach
+    @endforeach
+
+    @foreach(['skills', 'languages'] as $list)
+        @if($document[$list] !== [])
+            <h2>{{ $document['labels'][$list] }}</h2>
+            <p class="text">{{ implode(' · ', $document[$list]) }}</p>
+        @endif
+    @endforeach
+</body>
 </html>
