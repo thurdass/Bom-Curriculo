@@ -6,6 +6,7 @@ use App\Enums\UserQualificationTypeEnum;
 use App\Helpers\ResponseData;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Resume\ResumeController;
+use App\Http\Controllers\Api\Resume\ResumeScoreController;
 use App\Http\Controllers\Api\User\UserController;
 use App\Http\Controllers\Api\User\UserResumeController;
 use App\Services\Bot\ProcessBotService;
@@ -59,6 +60,7 @@ Route::group([
 
         Route::post('{resume}/finish', [ResumeController::class, 'finish']);
         Route::get('{resume}/download', [ResumeController::class, 'download'])->whereUuid('resume');
+        Route::post('{resume}/score', ResumeScoreController::class)->whereUuid('resume');
 
     });
 

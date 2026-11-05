@@ -13,11 +13,22 @@ final class OllamaClient
 {
     public function generate(array $messages, ?string $resumeId = null): array
     {
+        return $this->request($messages, ResumePayload::schema(), ResumePayload::validate(...), $resumeId, 'generation', ResumePrompt::VERSION);
+    }
+
+    public function score(array $messages, ?string $resumeId = null): array
+    {
+        return $this->request($messages, ResumeScorePayload::schema(), ResumeScorePayload::validate(...), $resumeId, 'score', ResumeScorePrompt::VERSION);
+    }
+
+    private function request(array $messages, array $schema, callable $validate, ?string $resumeId, string $operation, string $promptVersion): array
+    {
         $config = config('resume.ollama');
         $started = hrtime(true);
         $context = [
             'request_id' => (string) Str::uuid(), 'provider' => 'ollama',
-            'requested_model' => $config['model'], 'prompt_version' => ResumePrompt::VERSION,
+            'requested_model' => $config['model'], 'prompt_version' => $promptVersion,
+            'operation' => $operation,
             'user_resume_id' => $resumeId,
         ];
         try {
@@ -29,7 +40,7 @@ final class OllamaClient
                 ->connectTimeout($config['connect_timeout_seconds'])->timeout($config['timeout_seconds'])
                 ->post('/api/chat', [
                     'model' => $config['model'], 'messages' => $messages,
-                    'format' => ResumePayload::schema(), 'stream' => false, 'think' => false,
+                    'format' => $schema, 'stream' => false, 'think' => false,
                     'keep_alive' => $config['keep_alive'],
                     'options' => ['temperature' => $config['temperature'], 'num_predict' => $config['num_predict'], 'num_ctx' => $config['num_ctx']],
                 ]);
@@ -44,8 +55,8 @@ final class OllamaClient
                 || ($body['model'] ?? null) !== $config['model']) {
                 throw new RuntimeException('Ollama returned an incomplete or unexpected response.', 502);
             }
-            $payload = ResumePayload::validate(JsonObject::decode($body['message']['content']));
-            Log::info('Resume generation completed.', $context + [
+            $payload = $validate(JsonObject::decode($body['message']['content']));
+            Log::info("Resume {$operation} completed.", $context + [
                 'model' => $body['model'], 'duration_ms' => round((hrtime(true) - $started) / 1e6),
                 'input_tokens' => is_int($body['prompt_eval_count'] ?? null) ? $body['prompt_eval_count'] : null,
                 'output_tokens' => is_int($body['eval_count'] ?? null) ? $body['eval_count'] : null,
@@ -53,7 +64,7 @@ final class OllamaClient
 
             return $payload;
         } catch (Throwable $error) {
-            Log::warning('Resume generation failed.', $context + [
+            Log::warning("Resume {$operation} failed.", $context + [
                 'duration_ms' => round((hrtime(true) - $started) / 1e6), 'exception_type' => get_class($error),
             ]);
             if ($error instanceof ConnectionException) {
