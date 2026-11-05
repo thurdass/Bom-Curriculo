@@ -4,50 +4,49 @@ namespace App\Services\Resume;
 
 use App\Models\User;
 use App\Models\UserResume;
-use App\Services\Bot\Actions\PublishBotAction;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Http;
+use App\Services\Resume\Documents\DocumentTextExtractor;
+use App\Services\Resume\Documents\ResumeContentValidator;
 use Illuminate\Support\Facades\Validator;
 use RuntimeException;
 
-/** Temporary Python document/GitHub adapter, replaceable independently of inference. */
-final class ResumeSourcePreparer
+class ResumeSourcePreparer
 {
+    public function __construct(
+        private DocumentTextExtractor $documents,
+        private ResumeContentValidator $validator,
+        private GitHubProfileFetcher $github,
+    ) {}
+
     public function prepare(UserResume $resume, User $user): array
     {
-        $url = config('services.bot.url');
-        if (! is_string($url) || $url === '') {
-            throw new RuntimeException('Document preparation is not configured.', 503);
-        }
-        try {
-            $sources = (new PublishBotAction(
-                Http::acceptJson()->baseUrl(rtrim($url, '/').'/api/v1')
-                    ->connectTimeout(config('services.bot.connect_timeout_seconds'))
-                    ->timeout(config('resume.prepare_timeout_seconds')),
-                $user, $resume, '/prepare',
-            ))->handle();
-        } catch (ConnectionException $error) {
-            throw new RuntimeException('Document preparation is unavailable or timed out.', 503, $error);
-        } catch (RequestException $error) {
-            // Upstream errors may contain document text; never expose their body.
-            throw new RuntimeException(
-                $error->response->status() === 422 ? 'The uploaded documents could not be read or validated.' : 'Document preparation failed.',
-                $error->response->status() === 422 ? 422 : 503, $error,
-            );
-        }
-
-        if (($sources['version'] ?? null) !== 1 || Validator::make($sources, [
-            'resume_text' => ['required', 'string'],
-            'linkedin_text' => ['present', 'nullable', 'string'],
-            'github_profile' => ['present', 'nullable', 'array'],
+        $context = $resume->source_context ?? [
+            'github_url' => $user->github_link,
+            'portfolio_url' => $user->site_link,
+            'additional_skills' => $user->skills()->get(['name', 'years'])->toArray(),
+        ];
+        if (Validator::make($context, [
             'github_url' => ['present', 'nullable', 'string'],
             'portfolio_url' => ['present', 'nullable', 'string'],
             'additional_skills' => ['present', 'array'],
             'additional_skills.*.name' => ['required', 'string'],
-            'additional_skills.*.years' => ['present', 'nullable', 'integer'],
+            'additional_skills.*.years' => ['nullable', 'integer'],
         ])->fails()) {
-            throw new RuntimeException('Invalid document preparation response.', 502);
+            throw new RuntimeException('Invalid resume source information.', 422);
+        }
+        $text = $this->documents->extract($resume->original_file_path_cv);
+        $this->validator->validate($text);
+        $linkedin = $resume->original_file_path_linkedin
+            ? $this->documents->extract($resume->original_file_path_linkedin, true) : null;
+        $sources = [
+            'version' => 1, 'resume_text' => $text, 'linkedin_text' => $linkedin,
+            'github_url' => $context['github_url'], 'portfolio_url' => $context['portfolio_url'],
+            'github_profile' => $this->github->fetch($context['github_url']),
+            'additional_skills' => array_map(fn ($skill) => [
+                'name' => $skill['name'], 'years' => isset($skill['years']) ? (int) $skill['years'] : null,
+            ], $context['additional_skills']),
+        ];
+        if (mb_strlen(json_encode($sources, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)) > config('resume.ollama.max_source_characters')) {
+            throw new RuntimeException('The documents exceed the configured generation input limit.', 422);
         }
 
         return $sources;
