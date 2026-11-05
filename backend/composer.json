@@ -7,6 +7,9 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "ext-dom": "*",
+        "ext-mbstring": "*",
+        "ext-zip": "*",
         "barryvdh/laravel-dompdf": "^3.1",
         "darkaonline/l5-swagger": "^11.1",
         "kreait/firebase-php": "*",
@@ -14,6 +17,7 @@
         "laravel/horizon": "^5.47",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "symfony/process": "^7.4.5 || ^8.0.5",
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^15.0"
     },
     "require-dev": {

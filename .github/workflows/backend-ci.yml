@@ -40,11 +40,14 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: mbstring, dom, fileinfo, sqlite3, pdo_sqlite
+          extensions: mbstring, dom, zip, fileinfo, sqlite3, pdo_sqlite
           coverage: none
 
       - name: Copy .env
         run: cp .env.example .env
+
+      - name: Install PDF text extractor
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
 
       - name: Cache Composer packages
         uses: actions/cache@v4

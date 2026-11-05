@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libpq-dev \
     libsqlite3-dev \
+    poppler-utils \
     && docker-php-ext-configure gd \
         --with-freetype \
         --with-jpeg \

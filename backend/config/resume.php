@@ -4,6 +4,13 @@ return [
     'generation_driver' => env('RESUME_GENERATION_DRIVER', 'ollama'),
     'output_language' => env('RESUME_OUTPUT_LANGUAGE', 'pt-BR'),
     'prepare_timeout_seconds' => (int) env('RESUME_PREPARE_TIMEOUT_SECONDS', 30),
+    'documents' => [
+        'pdftotext_binary' => env('PDFTOTEXT_BINARY', '/usr/bin/pdftotext'),
+        'timeout_seconds' => (int) env('RESUME_DOCUMENT_TIMEOUT_SECONDS', 10),
+        'max_file_bytes' => 10 * 1024 * 1024,
+        'max_xml_bytes' => 16 * 1024 * 1024,
+        'max_text_bytes' => 256 * 1024,
+    ],
     'ollama' => [
         'url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
         'model' => env('OLLAMA_MODEL', 'qwen3:4b'),
