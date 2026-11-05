@@ -9,7 +9,7 @@ export async function analyseResume(
   userResumeId?: string | number,
 ): Promise<AnalyseResumeResponse> {
   const { data } = await httpClient.post<AnalyseResumeResponse>(
-    "/client/services/bot/process",
+    "/client/services/resumes/process",
     userResumeId ? { user_resume_id: userResumeId } : {},
   );
 

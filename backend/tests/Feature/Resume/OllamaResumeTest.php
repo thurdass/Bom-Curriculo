@@ -13,7 +13,7 @@ beforeEach(function () {
     Storage::fake('local');
     Http::preventStrayRequests();
     config([
-        'resume.generation_driver' => 'ollama',
+
         'resume.ollama.url' => 'http://ollama.test', 'resume.ollama.model' => 'qwen3:4b',
     ]);
     $this->auth = actingAsUser();
@@ -42,7 +42,7 @@ beforeEach(function () {
 
 function processOllamaResume($test)
 {
-    return $test->withHeaders($test->auth['headers'])->postJson('/api/client/services/bot/process', ['user_resume_id' => $test->resume->id]);
+    return $test->withHeaders($test->auth['headers'])->postJson('/api/client/services/resumes/process', ['user_resume_id' => $test->resume->id]);
 }
 
 it('generates directly with explicit model, schema, sources and preserved user facts', function () {
@@ -141,6 +141,6 @@ it('rejects concurrent generation without changing resume status and releases it
 
 it('checks ownership before preparation or inference', function () {
     $other = actingAsUser();
-    $this->withHeaders($other['headers'])->postJson('/api/client/services/bot/process', ['user_resume_id' => $this->resume->id])->assertNotFound();
+    $this->withHeaders($other['headers'])->postJson('/api/client/services/resumes/process', ['user_resume_id' => $this->resume->id])->assertNotFound();
     Http::assertNothingSent();
 });

@@ -25,7 +25,7 @@ final class OllamaResumeGenerator implements ResumeGenerator
         }
         $payload = $this->client->generate($this->prompt->messages($sources), $resume->id);
 
-        // User-provided facts take precedence over model guesses, as in the Python builder.
+        // User-provided facts take precedence over model guesses.
         $links = (array) $payload['header']['links'];
         foreach (['github_url' => 'GitHub', 'portfolio_url' => 'Portfolio'] as $field => $label) {
             if (! empty($sources[$field])) {

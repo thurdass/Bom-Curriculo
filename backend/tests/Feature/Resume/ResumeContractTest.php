@@ -6,21 +6,22 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
-    config(['resume.generation_driver' => 'python']);
     Storage::fake('local');
-    config(['services.bot.url' => 'https://contract-bot.test']);
+    config(['resume.ollama.url' => 'http://ollama.test']);
 });
 
-it('takes the Python contract through processing, review and PDF without losing summary or score', function () {
+it('takes the canonical contract through processing, review and PDF without losing summary or score', function () {
     $auth = actingAsUser();
-    Storage::put('cv.pdf', 'fixture');
+    Storage::put('cv.pdf', file_get_contents(base_path('tests/Fixtures/documents/full_resume.pdf')));
     $resume = $auth['user']->resumes()->create(['original_file_path_cv' => 'cv.pdf']);
     Http::fake([
-        '*/health' => Http::response(['status' => 'online']),
-        '*/api/v1/build' => Http::response(file_get_contents(base_path('tests/Fixtures/generated_resume_payload.json')), 200, ['Content-Type' => 'application/json']),
+        'http://ollama.test/api/chat' => Http::response([
+            'model' => 'qwen3:4b', 'done' => true, 'done_reason' => 'stop',
+            'message' => ['content' => file_get_contents(base_path('tests/Fixtures/generated_resume_payload.json'))],
+        ]),
     ]);
 
-    $this->withHeaders($auth['headers'])->postJson('/api/client/services/bot/process', ['user_resume_id' => $resume->id])
+    $this->withHeaders($auth['headers'])->postJson('/api/client/services/resumes/process', ['user_resume_id' => $resume->id])
         ->assertOk()->assertJsonPath('data.0.others.score', 88)
         ->assertJsonPath('data.0.header.summary', 'Desenvolvedora com experiência em APIs PHP.');
 

@@ -5,7 +5,7 @@ namespace App\Services\Resume;
 use InvalidArgumentException;
 use stdClass;
 
-/** The v1 generation contract shared with the Python BuiltResumeResult. */
+/** The v1 canonical resume generation contract. */
 final class ResumePayload
 {
     public static function schema(): array

@@ -45,11 +45,4 @@ return [
         ],
     ],
 
-    'bot' => [
-        'url' => env('BOT_URL', 'http://127.0.0.1:8000'),
-        'connect_timeout_seconds' => (float) env('BOT_CONNECT_TIMEOUT_SECONDS', 5),
-        'health_timeout_seconds' => (float) env('BOT_HEALTH_TIMEOUT_SECONDS', 5),
-        'timeout_seconds' => (float) env('BOT_TIMEOUT_SECONDS', 260),
-    ],
-
 ];

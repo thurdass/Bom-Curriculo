@@ -1,11 +1,11 @@
 <?php
 
-use App\Services\Bot\DTO\BotCallbackDto;
+use App\Services\Resume\LegacyResumePayload;
 use Illuminate\Support\Arr;
 
 beforeEach(function () {
     $this->payload = json_decode(
-        file_get_contents(base_path('tests/Fixtures/bot_resume_payload.json')),
+        file_get_contents(base_path('tests/Fixtures/legacy_resume_payload.json')),
         true,
         512,
         JSON_THROW_ON_ERROR
@@ -13,7 +13,7 @@ beforeEach(function () {
 });
 
 it('preserves the complete validated AI payload without legacy fields', function () {
-    expect(BotCallbackDto::fromData($this->payload)->toArray())->toBe($this->payload);
+    expect(LegacyResumePayload::fromData($this->payload)->toArray())->toBe($this->payload);
 });
 
 it('accepts null in every nullable field without removing any keys', function () {
@@ -37,7 +37,7 @@ it('accepts null in every nullable field without removing any keys', function ()
         Arr::set($payload, $path, null);
     }
 
-    expect(BotCallbackDto::fromData($payload)->toArray())->toBe($payload);
+    expect(LegacyResumePayload::fromData($payload)->toArray())->toBe($payload);
 });
 
 it('accepts empty lists at every collection field', function () {
@@ -47,13 +47,13 @@ it('accepts empty lists at every collection field', function () {
         Arr::set($payload, $path, []);
     }
 
-    expect(BotCallbackDto::fromData($payload)->toArray())->toBe($payload);
+    expect(LegacyResumePayload::fromData($payload)->toArray())->toBe($payload);
 
     foreach (['skills', 'experiences', 'education', 'courses', 'languages', 'projects', 'certifications'] as $field) {
         $payload[$field] = [];
     }
 
-    expect(BotCallbackDto::fromData($payload)->toArray())->toBe($payload);
+    expect(LegacyResumePayload::fromData($payload)->toArray())->toBe($payload);
 });
 
 it('accepts integer and fractional numbers without adding range constraints', function (int|float $value) {
@@ -61,14 +61,14 @@ it('accepts integer and fractional numbers without adding range constraints', fu
     $payload['skills'][0]['years'] = $value;
     $payload['courses'][0]['workload'] = $value;
 
-    expect(BotCallbackDto::fromData($payload)->toArray())->toBe($payload);
+    expect(LegacyResumePayload::fromData($payload)->toArray())->toBe($payload);
 })->with([0, 6, 2.5, -1, -0.5]);
 
 it('requires every declared root and nested key', function (string $path) {
     $payload = $this->payload;
     Arr::forget($payload, $path);
 
-    expect(fn () => BotCallbackDto::fromData($payload))
+    expect(fn () => LegacyResumePayload::fromData($payload))
         ->toThrow(InvalidArgumentException::class, "payload.{$path}: missing required field", 502);
 })->with([
     'personal', 'professional_summary', 'target_role', 'skills', 'experiences',
@@ -83,7 +83,7 @@ it('rejects extra keys at every object level', function (string $path) {
     $payload = $this->payload;
     Arr::set($payload, $path, null);
 
-    expect(fn () => BotCallbackDto::fromData($payload))
+    expect(fn () => LegacyResumePayload::fromData($payload))
         ->toThrow(InvalidArgumentException::class, "payload.{$path}: unexpected field", 502);
 })->with([
     'score', 'header', 'qualifications', 'others', 'user_resume_id',
@@ -96,7 +96,7 @@ it('rejects incorrect types without coercing values', function (string $path, mi
     $payload = $this->payload;
     Arr::set($payload, $path, $value);
 
-    expect(fn () => BotCallbackDto::fromData($payload))
+    expect(fn () => LegacyResumePayload::fromData($payload))
         ->toThrow(InvalidArgumentException::class, "payload.{$path}", 502);
 })->with([
     'null personal' => ['personal', null],
@@ -134,14 +134,14 @@ it('validates every month date field and preserves valid dates', function (strin
         $payload = $this->payload;
         Arr::set($payload, $path, $date);
 
-        expect(BotCallbackDto::fromData($payload)->toArray())->toBe($payload);
+        expect(LegacyResumePayload::fromData($payload)->toArray())->toBe($payload);
     }
 
     foreach (['2024-00', '2024-13', '2024-1', '24-01', '2024-01-01', "2024-01\n", '', 202401] as $date) {
         $payload = $this->payload;
         Arr::set($payload, $path, $date);
 
-        expect(fn () => BotCallbackDto::fromData($payload))
+        expect(fn () => LegacyResumePayload::fromData($payload))
             ->toThrow(InvalidArgumentException::class, "payload.{$path}", 502);
     }
 })->with([

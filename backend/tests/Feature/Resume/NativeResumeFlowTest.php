@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 beforeEach(function () {
     Storage::fake('local');
     Http::preventStrayRequests();
-    config(['resume.generation_driver' => 'ollama', 'resume.ollama.url' => 'http://ollama.test', 'resume.github.token' => null]);
+    config(['resume.ollama.url' => 'http://ollama.test', 'resume.github.token' => null]);
 });
 
 it('uploads, extracts, enriches, generates, reviews and downloads without a document service', function ($extension) {
@@ -30,7 +30,7 @@ it('uploads, extracts, enriches, generates, reviews and downloads without a docu
         'github_link' => 'https://github.com/example', 'site_link' => 'https://example.test',
         'skills' => [['name' => 'PHP', 'years' => 7]],
     ])->assertOk()->json('data.user_resume_id');
-    $this->withHeaders($auth['headers'])->postJson('/api/client/services/bot/process', ['user_resume_id' => $id])
+    $this->withHeaders($auth['headers'])->postJson('/api/client/services/resumes/process', ['user_resume_id' => $id])
         ->assertOk()->assertJsonPath('data.0.skills.0.years', 7);
     Http::assertSentCount(3);
     Http::assertSent(function ($request) {

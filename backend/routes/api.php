@@ -6,10 +6,10 @@ use App\Enums\UserQualificationTypeEnum;
 use App\Helpers\ResponseData;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Resume\ResumeController;
+use App\Http\Controllers\Api\Resume\ResumeProcessingController;
 use App\Http\Controllers\Api\Resume\ResumeScoreController;
 use App\Http\Controllers\Api\User\UserController;
 use App\Http\Controllers\Api\User\UserResumeController;
-use App\Services\Bot\ProcessBotService;
 use Illuminate\Support\Facades\Route;
 
 // Return enumerates data
@@ -65,9 +65,9 @@ Route::group([
     });
 
     Route::prefix('/services')->group(function () {
-        Route::prefix('/bot')->group(function () {
-            Route::post('/process', [ProcessBotService::class, 'analyse']);
-        });
+        Route::post('/resumes/process', ResumeProcessingController::class);
+        // URL compatibility for older frontend deployments; no bot service is involved.
+        Route::post('/bot/process', ResumeProcessingController::class);
     });
 
 });

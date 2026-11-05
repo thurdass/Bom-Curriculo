@@ -1,7 +1,8 @@
 <?php
 
 use App\Models\UserResume;
-use App\Services\Bot\Actions\PublishBotAction;
+use App\Services\Resume\Documents\DocumentTextExtractor;
+use App\Services\Resume\ResumeSourcePreparer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -56,7 +57,7 @@ it('fails with only links, no files', function () {
     ]);
 });
 
-it('accepts a DOCX CV supported by the bot', function () {
+it('accepts a DOCX CV supported by the extractor', function () {
 
     Storage::fake('local');
 
@@ -75,7 +76,7 @@ it('accepts a DOCX CV supported by the bot', function () {
     expect($auth['user']->resumes()->count())->toBe(1);
 });
 
-it('rejects a CV format unsupported by the bot', function () {
+it('rejects a CV format unsupported by the extractor', function () {
 
     Storage::fake('local');
 
@@ -90,7 +91,7 @@ it('rejects a CV format unsupported by the bot', function () {
     expect($auth['user']->resumes()->count())->toBe(0);
 });
 
-it('rejects a LinkedIn format unsupported by the bot', function () {
+it('rejects a LinkedIn format unsupported by the extractor', function () {
 
     Storage::fake('local');
 
@@ -133,14 +134,11 @@ it('returns the exact upload UUID and snapshots sources independently of later p
     $resume = UserResume::findOrFail($first);
     expect($resume->source_context['additional_skills'])->toBe([['name' => 'PHP', 'years' => 3]])
         ->and($resume->toArray())->not->toHaveKey('source_context');
-    Http::fake(function ($request) {
-        $form = collect($request->data())->keyBy('name');
-        expect($form['github_url']['contents'])->toBe('https://github.com/first')
-            ->and(json_decode($form['additional_skills']['contents'], true))->toBe([['name' => 'PHP', 'years' => 3]]);
-
-        return Http::response('{"ok":true}');
-    });
-    (new PublishBotAction(Http::baseUrl('http://prepare.test/api/v1'), $auth['user']->fresh(), $resume, '/prepare'))->handle();
+    $this->mock(DocumentTextExtractor::class)->shouldReceive('extract')->andReturn(file_get_contents(base_path('tests/Fixtures/documents/full_resume.txt')));
+    Http::fake(['https://api.github.com/users/first' => Http::response([], 404)]);
+    $sources = app(ResumeSourcePreparer::class)->prepare($resume, $auth['user']->fresh());
+    expect($sources['github_url'])->toBe('https://github.com/first')
+        ->and($sources['additional_skills'])->toBe([['name' => 'PHP', 'years' => 3]]);
     Http::assertSentCount(1);
 });
 

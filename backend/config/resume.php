@@ -1,9 +1,7 @@
 <?php
 
 return [
-    'generation_driver' => env('RESUME_GENERATION_DRIVER', 'ollama'),
     'output_language' => env('RESUME_OUTPUT_LANGUAGE', 'pt-BR'),
-    'prepare_timeout_seconds' => (int) env('RESUME_PREPARE_TIMEOUT_SECONDS', 30),
     'documents' => [
         'pdftotext_binary' => env('PDFTOTEXT_BINARY', '/usr/bin/pdftotext'),
         'timeout_seconds' => (int) env('RESUME_DOCUMENT_TIMEOUT_SECONDS', 10),

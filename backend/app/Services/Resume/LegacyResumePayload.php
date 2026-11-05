@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services\Bot\DTO;
+namespace App\Services\Resume;
 
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
-final class BotCallbackDto
+final class LegacyResumePayload
 {
     private const SCHEMA = [
         'personal' => [
@@ -140,9 +140,9 @@ final class BotCallbackDto
 
     private static function invalid(string $path, string $reason): never
     {
-        $message = "Invalid bot payload at {$path}: {$reason}.";
+        $message = "Invalid legacy resume payload at {$path}: {$reason}.";
 
-        Log::channel('bot')->error('BOT DTO fail', ['error' => $message]);
+        Log::error('Legacy resume payload validation failed.', ['error' => $message]);
 
         throw new InvalidArgumentException($message, 502);
     }
