@@ -10,6 +10,8 @@ Laravel extracts PDF/DOCX files, enriches public GitHub profiles, validates data
 and generates resumes directly through Ollama (`qwen3:4b`). No Python service is required.
 See the [migration report and operating guide](docs/migracao-llm-laravel.md) for
 contracts, configuration, tests, and remaining work.
+The [ATS PDF quality report](docs/qualidade-pdf-ats.md) documents layout,
+pagination, language handling, and validation across different professional profiles.
 
 ## About
 
