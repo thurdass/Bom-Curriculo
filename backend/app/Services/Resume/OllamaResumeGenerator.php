@@ -27,12 +27,13 @@ final class OllamaResumeGenerator implements ResumeGenerator
 
         // User-provided facts take precedence over model guesses.
         $links = (array) $payload['header']['links'];
+        $reportedLinks = [];
         foreach (['github_url' => 'GitHub', 'portfolio_url' => 'Portfolio'] as $field => $label) {
             if (! empty($sources[$field])) {
-                $links[$label] = $sources[$field];
+                $reportedLinks[$label] = $sources[$field];
             }
         }
-        $payload['header']['links'] = (object) $links;
+        $payload['header']['links'] = (object) ResumeLinks::merge($links, $reportedLinks);
         foreach ($sources['additional_skills'] as $reported) {
             $found = false;
             foreach ($payload['skills'] as &$skill) {

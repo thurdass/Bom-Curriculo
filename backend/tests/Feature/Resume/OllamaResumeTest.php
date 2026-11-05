@@ -45,6 +45,19 @@ function processOllamaResume($test)
     return $test->withHeaders($test->auth['headers'])->postJson('/api/client/services/resumes/process', ['user_resume_id' => $test->resume->id]);
 }
 
+it('persists a reported GitHub link only once when the model varies its label casing', function () {
+    $payload = json_decode($this->completion['message']['content']);
+    $payload->header->links = (object) ['Github' => 'https://github.com/guessed', 'github' => 'https://github.com/example'];
+    $this->completion['message']['content'] = json_encode($payload);
+    Http::fake(['*/api/chat' => Http::response($this->completion)]);
+    processOllamaResume($this)->assertOk()
+        ->assertJsonPath('data.0.header.links.GitHub', 'https://github.com/example')
+        ->assertJsonCount(2, 'data.0.header.links');
+    expect(ResumeAnalytic::sole()->ai_payload['header']['links'])->toBe([
+        'GitHub' => 'https://github.com/example', 'Portfolio' => 'https://example.test',
+    ]);
+});
+
 it('generates directly with explicit model, schema, sources and preserved user facts', function () {
     Log::spy();
     $options = [];
