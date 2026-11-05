@@ -23,7 +23,7 @@ final class ResumePayload
             'score' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100],
             'professional_summary' => $nullable,
             'header' => $object([
-                'name' => $nullable, 'headline' => $nullable, 'email' => $nullable,
+                'name' => $nullable, 'headline' => $nullable + ['description' => 'Professional headline in the requested output language. Translate descriptive job/student wording; preserve technology names.'], 'email' => $nullable,
                 'location' => $nullable, 'contacts' => $nullable, 'emails' => $nullable,
                 'links' => ['type' => 'object', 'additionalProperties' => $text],
             ]),
@@ -33,8 +33,12 @@ final class ResumePayload
                 'city' => $nullable, 'state' => $nullable, 'country' => $nullable,
             ]),
             'projects' => $list([
-                'title' => $text, 'start' => $date, 'end' => $date,
-                'technologies' => $nullable, 'description' => $nullable, 'url' => $nullable,
+                'title' => $text,
+                'start' => $nullable + ['description' => 'Explicit start date of this project only; null if absent. Never reuse education or employment dates.'],
+                'end' => $nullable + ['description' => 'Explicit end date of this project only; null if absent. Never infer the current date.'],
+                'technologies' => $nullable,
+                'description' => $nullable + ['description' => 'Translate the project description into the requested output language, including English GitHub descriptions. Preserve facts and proper names.'],
+                'url' => $nullable,
             ]),
             'qualifications' => $list([
                 'type' => $text + ['enum' => ['elementary_education', 'high_school', 'extracurricular_course', 'technical_course', 'undergraduate_degree', 'postgraduate_degree', 'master_degree', 'doctorate_degree']],

@@ -1,0 +1,36 @@
+{
+    "version": 1,
+    "resume_text": "Ana Exemplo é estudante do Ensino Médio Técnico em Informática no Instituto Exemplo, desde 2025, em andamento. Nunca teve emprego. Desenvolve projetos pessoais em Java e PHP. Tem dois anos de estudo de Java e um ano de estudo de PHP. Fala português nativo. Mora em Salvador, Bahia. Contato: ana@example.test. Seu objetivo é uma oportunidade de estágio em desenvolvimento de software.",
+    "linkedin_text": null,
+    "github_url": "https://github.com/example",
+    "portfolio_url": null,
+    "additional_skills": [
+        {
+            "name": "Java",
+            "years": 2
+        },
+        {
+            "name": "PHP",
+            "years": 1
+        }
+    ],
+    "github_profile": {
+        "username": "example",
+        "top_repos": [
+            {
+                "name": "LocalShop",
+                "description": "Local commerce platform where stores showcase products and connect with customers via WhatsApp.",
+                "language": "PHP",
+                "url": "https://github.com/example/LocalShop",
+                "stars": 0
+            },
+            {
+                "name": "MazeGame",
+                "description": "A two-dimensional game built with Java Swing and Graphics2D.",
+                "language": "Java",
+                "url": "https://github.com/example/MazeGame",
+                "stars": 0
+            }
+        ]
+    }
+}
