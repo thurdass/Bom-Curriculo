@@ -11,6 +11,10 @@ return [
         'max_xml_bytes' => 16 * 1024 * 1024,
         'max_text_bytes' => 256 * 1024,
     ],
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+        'timeout_seconds' => (int) env('GITHUB_TIMEOUT_SECONDS', 10),
+    ],
     'ollama' => [
         'url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
         'model' => env('OLLAMA_MODEL', 'qwen3:4b'),
