@@ -64,13 +64,9 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      BOT_URL: ${BOT_URL:-http://bot:8000}
-      BOT_CONNECT_TIMEOUT_SECONDS: ${BOT_CONNECT_TIMEOUT_SECONDS:-5}
-      BOT_HEALTH_TIMEOUT_SECONDS: ${BOT_HEALTH_TIMEOUT_SECONDS:-5}
-      BOT_TIMEOUT_SECONDS: ${BOT_TIMEOUT_SECONDS:-260}
-      RESUME_GENERATION_DRIVER: ${RESUME_GENERATION_DRIVER:-ollama}
       RESUME_OUTPUT_LANGUAGE: ${RESUME_OUTPUT_LANGUAGE:-pt-BR}
-      RESUME_PREPARE_TIMEOUT_SECONDS: ${RESUME_PREPARE_TIMEOUT_SECONDS:-30}
+      RESUME_DOCUMENT_TIMEOUT_SECONDS: ${RESUME_DOCUMENT_TIMEOUT_SECONDS:-10}
+      GITHUB_TIMEOUT_SECONDS: ${GITHUB_TIMEOUT_SECONDS:-10}
       RESUME_MAX_SOURCE_CHARACTERS: ${RESUME_MAX_SOURCE_CHARACTERS:-30000}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
@@ -87,8 +83,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      bot:
-        condition: service_healthy
+      ollama-model:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -99,37 +95,6 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
-    networks:
-      - bomcurriculo
-
-  bot:
-    build:
-      context: ./bot
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ./bot/.env
-    environment:
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
-      OLLAMA_REASONING: ${OLLAMA_REASONING:-false}
-      OLLAMA_NUM_PREDICT: ${OLLAMA_NUM_PREDICT:-2048}
-      BOT_INFERENCE_DEADLINE_SECONDS: ${BOT_INFERENCE_DEADLINE_SECONDS:-240}
-    ports:
-      - "${BOT_PORT:-8000}:8000"
-    healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-    depends_on:
-      ollama-model:
-        condition: service_completed_successfully
     networks:
       - bomcurriculo
 
@@ -145,8 +110,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-      bot:
-        condition: service_healthy
     healthcheck:
       test:
         - CMD
@@ -154,7 +117,7 @@ services:
         - --quiet
         - --tries=1
         - --spider
-        - http://localhost/healthz
+        - http://127.0.0.1/healthz
       interval: 10s
       timeout: 5s
       retries: 12
